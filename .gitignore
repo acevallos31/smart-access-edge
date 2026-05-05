@@ -12,8 +12,9 @@ obj/
 *.pdb
 *.log
 
+# ======================
 # ASP.NET / Visual Studio
-
+# ======================
 *.dbmdl
 *.jfm
 *.psess
@@ -23,8 +24,9 @@ obj/
 *.opendb
 *.VC.db
 
+# ======================
 # Node / Angular
-
+# ======================
 node_modules/
 dist/
 .angular/
@@ -33,24 +35,26 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-
-# Environment variables
-
+# ======================
+# Env files
+# ======================
 .env
 .env.local
 
-# Firebase (IMPORTANTE)
-
+# ======================
+# Firebase
+# ======================
 firebase-debug.log
 .firebaserc
 
-
+# ======================
 # IDEs
-
+# ======================
 .vscode/
 .idea/
 
+# ======================
 # OS
-
+# ======================
 .DS_Store
 Thumbs.db
