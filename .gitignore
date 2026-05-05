@@ -1,0 +1,56 @@
+# ======================
+# .NET
+# ======================
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+*.log
+
+# ASP.NET / Visual Studio
+
+*.dbmdl
+*.jfm
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.opendb
+*.VC.db
+
+# Node / Angular
+
+node_modules/
+dist/
+.angular/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# Environment variables
+
+.env
+.env.local
+
+# Firebase (IMPORTANTE)
+
+firebase-debug.log
+.firebaserc
+
+
+# IDEs
+
+.vscode/
+.idea/
+
+# OS
+
+.DS_Store
+Thumbs.db
