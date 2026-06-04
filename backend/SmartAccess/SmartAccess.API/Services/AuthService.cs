@@ -102,12 +102,12 @@ namespace SmartAccess.API.Services
             {
                 var docRef = _firebaseService.GetCollection("Users").Document(uid);
                 await docRef.UpdateAsync("CheckedIn", checkIn);
-                _logger.LogInformation($"CheckIn actualizado para usuario {uid}: {checkIn}");
+                _logger.LogInformation("CheckIn actualizado correctamente. Estado: {CheckedIn}", checkIn);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error actualizando CheckIn para {uid}: {ex.Message}");
+                _logger.LogError(ex, "Error actualizando CheckIn.");
                 return false;
             }
         }
