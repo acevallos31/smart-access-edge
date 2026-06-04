@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using SmartAccess.API.DTOs;
 using SmartAccess.API.Services;
 
