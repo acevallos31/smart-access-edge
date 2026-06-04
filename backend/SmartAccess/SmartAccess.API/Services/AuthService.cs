@@ -1,4 +1,4 @@
-﻿using FirebaseAdmin;
+using FirebaseAdmin;
 using FirebaseAdmin.Auth;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
@@ -8,48 +8,107 @@ namespace SmartAccess.API.Services
 {
     public class AuthService
     {
-        private readonly FirestoreDb _firestoreDb;
+        private readonly FirebaseService _firebaseService;
+        private readonly ILogger<AuthService> _logger;
 
-        public AuthService()
+        public AuthService(FirebaseService firebaseService, ILogger<AuthService> logger)
         {
-            // Inicializa la conexión con tu archivo secreto de Firebase
-            if (FirebaseApp.DefaultInstance == null)
+            _firebaseService = firebaseService ?? throw new ArgumentNullException(nameof(firebaseService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            InitializeFirebaseApp();
+        }
+
+        private void InitializeFirebaseApp()
+        {
+            try
             {
-                FirebaseApp.Create(new AppOptions()
+                if (FirebaseApp.DefaultInstance == null)
                 {
-                    Credential = GoogleCredential.FromFile("firebase-config.json")
-                });
+                    var credentialPath = Path.Combine(AppContext.BaseDirectory, "Config/firebase-credentials.json");
+                    var credential = GoogleCredential.FromFile(credentialPath);
+
+                    FirebaseApp.Create(new AppOptions { Credential = credential });
+                    _logger.LogInformation("Firebase App inicializado correctamente.");
+                }
             }
-            // Cambia "smart-access-edge" por el ID exacto de tu proyecto de Firebase
-            _firestoreDb = FirestoreDb.Create("smart-access-edge");
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error inicializando Firebase: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<User?> ValidarTokenFirebaseAsync(string idToken)
         {
             try
             {
-                // Descifra el token que viene desde la interfaz de Angular
-                FirebaseToken decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(idToken);
-                string uid = decodedToken.Uid;
+                if (string.IsNullOrWhiteSpace(idToken))
+                {
+                    _logger.LogWarning("Token vacío recibido.");
+                    return null;
+                }
 
-                // Busca en Firestore los privilegios del usuario (Admin o Empleado)
-                DocumentReference docRef = _firestoreDb.Collection("Users").Document(uid);
-                DocumentSnapshot snapshot = await docRef.GetSnapshotAsync();
+                var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(idToken);
+                var uid = decodedToken.Uid;
 
-                if (!snapshot.Exists) return null;
+                var usuarioDb = await ObtenerUsuarioAsync(uid);
+                return usuarioDb;
+            }
+            catch (FirebaseAuthException ex)
+            {
+                _logger.LogWarning($"Token inválido o expirado: {ex.Message}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error validando token: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<User?> ObtenerUsuarioAsync(string uid)
+        {
+            try
+            {
+                var docRef = _firebaseService.GetCollection("Users").Document(uid);
+                var snapshot = await docRef.GetSnapshotAsync();
+
+                if (!snapshot.Exists)
+                {
+                    _logger.LogWarning($"Usuario no encontrado: {uid}");
+                    return null;
+                }
 
                 return new User
                 {
                     UserId = uid,
-                    Email = snapshot.GetValue<string>("Email"),
-                    Nombre = snapshot.GetValue<string>("Nombre"),
-                    Rol = snapshot.GetValue<string>("Rol"),
+                    Email = snapshot.GetValue<string>("Email") ?? string.Empty,
+                    Nombre = snapshot.GetValue<string>("Nombre") ?? string.Empty,
+                    Rol = snapshot.GetValue<string>("Rol") ?? "Empleado",
                     CheckedIn = snapshot.GetValue<bool>("CheckedIn")
                 };
             }
-            catch
+            catch (Exception ex)
             {
-                return null; // Token manipulado o vencido
+                _logger.LogError($"Error obteniendo usuario {uid}: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<bool> ActualizarCheckInAsync(string uid, bool checkIn)
+        {
+            try
+            {
+                var docRef = _firebaseService.GetCollection("Users").Document(uid);
+                await docRef.UpdateAsync("CheckedIn", checkIn);
+                _logger.LogInformation($"CheckIn actualizado para usuario {uid}: {checkIn}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error actualizando CheckIn para {uid}: {ex.Message}");
+                return false;
             }
         }
     }
