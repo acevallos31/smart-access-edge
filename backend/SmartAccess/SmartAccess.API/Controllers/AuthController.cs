@@ -29,11 +29,11 @@ namespace SmartAccess.API.Controllers
             var usuarioValido = await _authService.ValidarTokenFirebaseAsync(loginDto.IdToken);
             if (usuarioValido == null)
             {
-                _logger.LogWarning($"Intento de login fallido con token inválido.");
+                _logger.LogWarning("Intento de login fallido con token inválido.");
                 return Unauthorized(new { message = "Acceso denegado. Token inválido." });
             }
 
-            _logger.LogInformation($"Usuario {usuarioValido.Email} ha iniciado sesión correctamente.");
+            _logger.LogInformation("Usuario {Email} ha iniciado sesión correctamente.", usuarioValido.Email);
             return Ok(usuarioValido);
         }
 

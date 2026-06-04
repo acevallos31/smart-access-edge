@@ -34,7 +34,7 @@ namespace SmartAccess.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error inicializando Firebase: {ex.Message}");
+                _logger.LogError(ex, "Error inicializando Firebase: {Message}", ex.Message);
                 throw;
             }
         }
@@ -57,12 +57,12 @@ namespace SmartAccess.API.Services
             }
             catch (FirebaseAuthException ex)
             {
-                _logger.LogWarning($"Token inválido o expirado: {ex.Message}");
+                _logger.LogWarning("Token inválido o expirado: {Message}", ex.Message);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error validando token: {ex.Message}");
+                _logger.LogError(ex, "Error validando token: {Message}", ex.Message);
                 return null;
             }
         }
@@ -76,7 +76,7 @@ namespace SmartAccess.API.Services
 
                 if (!snapshot.Exists)
                 {
-                    _logger.LogWarning($"Usuario no encontrado: {uid}");
+                    _logger.LogWarning("Usuario no encontrado: {UserId}", uid);
                     return null;
                 }
 
@@ -91,7 +91,7 @@ namespace SmartAccess.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error obteniendo usuario {uid}: {ex.Message}");
+                _logger.LogError(ex, "Error obteniendo usuario {UserId}: {Message}", uid, ex.Message);
                 return null;
             }
         }
