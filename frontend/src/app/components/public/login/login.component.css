@@ -151,3 +151,45 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* === MENSAJE DE ERROR === */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  animation: fade-in 0.2s ease;
+}
+
+.error-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0;
+}
+
+/* === SPINNER DENTRO DEL BOTÓN === */
+.spinner-btn {
+  display: inline-block;
+}
+
+.spinner-btn ::ng-deep circle {
+  stroke: white !important;
+}
+
+/* === BOTÓN DESHABILITADO === */
+.btn-login-premium:disabled {
+  opacity: 0.75 !important;
+  cursor: not-allowed;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
