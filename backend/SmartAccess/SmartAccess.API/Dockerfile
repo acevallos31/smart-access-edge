@@ -1,4 +1,7 @@
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
 
 WORKDIR /src
 
@@ -9,17 +12,24 @@ COPY . .
 
 RUN dotnet publish SmartAccess.API.csproj -c Release -o /app/publish
 
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
+
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
 WORKDIR /app
 
 COPY --from=build /app/publish .
 
-# Crear carpeta Config que espera FirebaseService
+
 RUN mkdir -p /app/Config
 
 ENV ASPNETCORE_URLS=http://+:8080
 
 EXPOSE 8080
+
+
+
+CMD sh -c "cp /etc/secrets/firebase-credentials.json /app/Config/firebase-credentials.json 2>/dev/null || true && dotnet SmartAccess.API.dll"
 
 CMD sh -c "cp /etc/secrets/firebase-credentials.json /app/Config/firebase-credentials.json 2>/dev/null || true && dotnet SmartAccess.API.dll"

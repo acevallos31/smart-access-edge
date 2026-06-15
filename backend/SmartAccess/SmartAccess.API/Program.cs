@@ -30,14 +30,14 @@ builder.Services.AddLogging();
 
 var app = builder.Build();
 
-// OpenAPI / Swagger / Scalar habilitado también en Render
+// OpenAPI / Scalar / Swagger disponibles también en Render
 app.MapOpenApi();
 app.MapScalarApiReference();
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Evitar warning HTTPS en Render
+// En Render no usamos redirección HTTPS interna
 if (!app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
