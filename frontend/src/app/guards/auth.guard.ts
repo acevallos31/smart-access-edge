@@ -1,25 +1,33 @@
 // ============================================================
-// GUARD DE AUTENTICACIÓN
+// GUARDS DE AUTENTICACIÓN Y ROLES — Smart Access Edge
 // ============================================================
-// Protege las rutas que requieren sesión iniciada.
-// Si el usuario no está autenticado, lo redirige al login.
-//
-// Ya está conectado al FirebaseAuthService — no necesitas
-// modificar este archivo al activar Firebase real.
-// ============================================================
-
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { FirebaseAuthService } from '../services/firebase-auth.service';
+import { AuthService } from '../services/auth.service';
 
+// Guard general: requiere sesión activa
 export const authGuard: CanActivateFn = () => {
-  const authService = inject(FirebaseAuthService);
-  const router      = inject(Router);
+  const auth   = inject(AuthService);
+  const router = inject(Router);
 
-  if (authService.estaAutenticado) {
-    return true;
-  }
+  if (auth.estaAutenticado) return true;
 
   router.navigate(['/login']);
+  return false;
+};
+
+// Guard de administración: Jefe, Subjefe, Contador, Asistente del Jefe, Administrador
+export const adminGuard: CanActivateFn = () => {
+  const auth   = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.estaAutenticado && auth.esAdmin) return true;
+
+  if (auth.estaAutenticado) {
+    // Tiene sesión pero sin rol admin → lo manda al dashboard de empleado
+    router.navigate(['/employee/dashboard']);
+  } else {
+    router.navigate(['/login']);
+  }
   return false;
 };

@@ -1,31 +1,27 @@
 // ============================================================
-// ARCHIVO DE CONFIGURACIÓN DE FIREBASE
+// CONFIGURACIÓN DE FIREBASE — RELLENA AQUÍ TUS CREDENCIALES
 // ============================================================
-// Reemplaza los valores de "firebaseConfig" con los datos
-// de tu proyecto en Firebase Console:
-// https://console.firebase.google.com/
-//
 // Pasos:
-// 1. Entra a tu proyecto en Firebase Console
-// 2. Click en el ícono de engranaje → Configuración del proyecto
-// 3. En "Tus apps", selecciona tu app web (o crea una)
-// 4. Copia el objeto firebaseConfig y pégalo aquí abajo
+// 1. Ve a https://console.firebase.google.com/
+// 2. Entra a tu proyecto → ⚙️ Configuración del proyecto
+// 3. En "Tus apps" selecciona tu app web (o crea una nueva)
+// 4. Copia el objeto firebaseConfig y pega los valores abajo
 // ============================================================
 
 export const environment = {
   production: false,
 
   firebaseConfig: {
-    apiKey: 'TU_API_KEY_AQUI',
-    authDomain: 'TU_PROJECT_ID.firebaseapp.com',
-    projectId: 'TU_PROJECT_ID',
-    storageBucket: 'TU_PROJECT_ID.appspot.com',
+    apiKey:            'TU_API_KEY_AQUI',
+    authDomain:        'TU_PROJECT_ID.firebaseapp.com',
+    projectId:         'TU_PROJECT_ID',
+    storageBucket:     'TU_PROJECT_ID.appspot.com',
     messagingSenderId: 'TU_MESSAGING_SENDER_ID',
-    appId: 'TU_APP_ID'
+    appId:             'TU_APP_ID'
   },
 
-  // URL del backend .NET (SmartAccess.API)
-  // En desarrollo local usa: http://localhost:5000
-  // En producción reemplaza con tu URL real
-  apiUrl: 'http://localhost:5000'
+  // ── URL del backend ASP.NET Core ──
+  // Desarrollo local: http://localhost:5000
+  // Producción: https://tu-dominio.com
+  apiUrl: 'http://localhost:5000/api'
 };

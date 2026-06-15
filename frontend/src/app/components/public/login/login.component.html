@@ -7,45 +7,85 @@
       <p>Control de Asistencia con Inteligencia Artificial</p>
     </div>
 
-    <mat-card-content class="form-content">
+    <!-- FORMULARIO PRINCIPAL -->
+    <mat-card-content class="form-content" *ngIf="!mostrarRecuperar">
       <form (ngSubmit)="ejecutarLogin()">
-
         <mat-form-field appearance="outline" class="full-width solid-white-field">
           <mat-label>Correo Institucional</mat-label>
-          <input matInput type="email"
-                 [(ngModel)]="email"
-                 name="email"
-                 required
-                 placeholder="ejemplo@empresa.com"
-                 [disabled]="cargando">
-          <mat-icon matSuffix class="animate-pulse">mail_lock</mat-icon>
+          <input matInput type="email" [(ngModel)]="email" name="email" required
+                 placeholder="ejemplo@empresa.com" [disabled]="cargando">
+          <mat-icon matSuffix>mail_lock</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width solid-white-field">
           <mat-label>Contraseña</mat-label>
-          <input matInput type="password"
-                 [(ngModel)]="password"
-                 name="password"
-                 required
-                 [disabled]="cargando">
-          <mat-icon matSuffix class="animate-shake">vpn_key</mat-icon>
+          <input matInput [type]="mostrarPassword ? 'text' : 'password'"
+                 [(ngModel)]="password" name="password" required [disabled]="cargando">
+          <mat-icon matSuffix style="cursor:pointer" (click)="mostrarPassword = !mostrarPassword">
+            {{ mostrarPassword ? 'visibility_off' : 'visibility' }}
+          </mat-icon>
         </mat-form-field>
 
-        <!-- Mensaje de error -->
         <div *ngIf="errorMessage" class="error-message">
           <mat-icon class="error-icon">error_outline</mat-icon>
           <span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Botón con spinner de carga -->
         <button mat-raised-button class="btn-login-premium" type="submit" [disabled]="cargando">
           <mat-spinner *ngIf="cargando" diameter="20" class="spinner-btn"></mat-spinner>
           <span *ngIf="!cargando">Ingresar al Sistema</span>
           <span *ngIf="cargando">Verificando...</span>
           <mat-icon *ngIf="!cargando">login</mat-icon>
         </button>
-
       </form>
+
+      <div class="links-row">
+        <button mat-button class="link-btn" (click)="mostrarRecuperar = true">
+          ¿Olvidaste tu contraseña?
+        </button>
+        <button mat-button class="link-btn" (click)="irRegistro()">Crear cuenta</button>
+      </div>
+
+      <!-- Hints de prueba para MODO DEMO -->
+      <details class="demo-hints">
+        <summary>🔑 Cuentas de prueba (Modo Demo)</summary>
+        <table class="hints-table">
+          <tr><th>Rol</th><th>Correo de ejemplo</th><th>Acceso admin</th></tr>
+          <tr><td>Jefe</td><td>jefe@empresa.com</td><td>✅ Sí</td></tr>
+          <tr><td>Subjefe</td><td>subjefe@empresa.com</td><td>✅ Sí</td></tr>
+          <tr><td>Contador</td><td>contador@empresa.com</td><td>✅ Sí</td></tr>
+          <tr><td>Asistente del Jefe</td><td>asistente@empresa.com</td><td>✅ Sí</td></tr>
+          <tr><td>Administrador</td><td>admin@empresa.com</td><td>✅ Sí</td></tr>
+          <tr><td>Empleado</td><td>empleado@empresa.com</td><td>❌ No</td></tr>
+        </table>
+        <small>En modo demo la contraseña puede ser cualquier texto.</small>
+      </details>
+    </mat-card-content>
+
+    <!-- RECUPERAR CONTRASEÑA -->
+    <mat-card-content class="form-content" *ngIf="mostrarRecuperar">
+      <h3 class="recuperar-titulo">Recuperar contraseña</h3>
+      <p class="recuperar-desc">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+
+      <mat-form-field appearance="outline" class="full-width solid-white-field">
+        <mat-label>Correo registrado</mat-label>
+        <input matInput type="email" [(ngModel)]="emailRecuperar" placeholder="tu@correo.com">
+        <mat-icon matSuffix>email</mat-icon>
+      </mat-form-field>
+
+      <div *ngIf="mensajeRecuperar" class="recuperar-msg"
+           [class.msg-ok]="mensajeRecuperar.startsWith('✓')"
+           [class.msg-error]="!mensajeRecuperar.startsWith('✓')">
+        {{ mensajeRecuperar }}
+      </div>
+
+      <button mat-raised-button class="btn-login-premium" (click)="recuperarContrasena()">
+        <mat-icon>send</mat-icon> Enviar enlace
+      </button>
+      <button mat-button class="link-btn" style="margin-top:1rem"
+              (click)="mostrarRecuperar = false; mensajeRecuperar = ''">
+        ← Volver al inicio de sesión
+      </button>
     </mat-card-content>
 
   </mat-card>
