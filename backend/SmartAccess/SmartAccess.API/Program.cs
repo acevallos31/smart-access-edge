@@ -1,18 +1,13 @@
-var builder = WebApplication.CreateBuilder(args);
+using SmartAccess.API.Services;
 
+var builder = WebApplication.CreateBuilder(args);
 
 // Servicios
 builder.Services.AddControllers();
-
-// Swagger (UI)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-// OpenAPI nuevo
 builder.Services.AddOpenApi();
 
-<<<<<<< Updated upstream
-=======
 // CORS — permite peticiones desde el frontend Angular
 builder.Services.AddCors(options =>
 {
@@ -32,27 +27,20 @@ builder.Services.AddSingleton<FirebaseService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddLogging();
 
->>>>>>> Stashed changes
 var app = builder.Build();
-
 
 // Middleware
 if (app.Environment.IsDevelopment())
 {
-    // Swagger clásico
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    // OpenAPI nuevo (JSON)
     app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
-<<<<<<< Updated upstream
 
-=======
-app.UseCors("FrontendPolicy");   // <-- CORS antes de Authorization
->>>>>>> Stashed changes
+app.UseCors("FrontendPolicy"); // CORS antes de Authorization
+
 app.UseAuthorization();
 
 app.MapControllers();

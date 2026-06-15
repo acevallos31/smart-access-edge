@@ -46,6 +46,7 @@ yarn-error.log*
 # ======================
 firebase-debug.log
 .firebaserc
+**/firebase-credentials.json
 
 # ======================
 # IDEs
@@ -58,3 +59,42 @@ firebase-debug.log
 # ======================
 .DS_Store
 Thumbs.db
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+
+# ======================
+# Runtime
+# ======================
+events/
+snapshots/
+known_faces/
+
+# ======================
+# AI
+# ======================
+*.pt
+face_data.pkl
+
+# ======================
+# Images
+# ======================
+*.jpg
+*.jpeg
+*.png
+
+# ======================
+# Inference runtime/data
+# ======================
+inference-server/__pycache__/
+inference-server/events/
+inference-server/snapshots/
+inference-server/known_faces/
+inference-server/face_data/
+inference-server/*.jpg
+inference-server/*.pt
+inference-server/*.bak
