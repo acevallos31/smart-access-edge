@@ -1,0 +1,676 @@
+/* === WRAPPER Y CARD === */
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: 20px;
+}
+
+.premium-login-card {
+  width: 100%;
+  max-width: 460px;
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 0 !important;
+  position: relative;
+}
+
+/* === BANNER SUPERIOR === */
+.green-banner-premium {
+  background: linear-gradient(135deg, #047857, #065f46);
+  color: white;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.green-banner-premium h2 {
+  font-size: 22px;
+  margin: 10px 0 5px 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.green-banner-premium p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.banner-icon {
+  font-size: 44px;
+  width: 44px;
+  height: 44px;
+}
+
+/* ================================================================ */
+/* === DIÁLOGO DE CONFIRMACIÓN "¿Estás seguro?"                  === */
+/* ================================================================ */
+.dialogo-overlay {
+  padding: 28px 24px 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fade-in 0.2s ease;
+}
+
+.dialogo-box {
+  width: 100%;
+  border-radius: 14px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border: 2px solid transparent;
+}
+
+.dialogo-entrada {
+  background: #f0fdf4;
+  border-color: #6ee7b7;
+}
+
+.dialogo-salida {
+  background: #ecfdf5;
+  border-color: #34d399;
+}
+
+.dialogo-icono-circulo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #059669, #047857);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pop-in 0.35s ease;
+}
+
+.dialogo-icono {
+  color: white;
+  font-size: 30px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.dialogo-titulo {
+  font-size: 19px;
+  font-weight: 700;
+  color: #064e3b;
+  text-align: center;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.dialogo-tipo-texto {
+  color: #047857;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dialogo-subtitulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #374151;
+  margin: 0;
+  font-weight: 500;
+}
+
+.dialogo-user-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  color: #047857;
+  vertical-align: middle;
+}
+
+.dialogo-aviso {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  margin: 0;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #d1fae5;
+  width: 100%;
+}
+
+/* Botones del diálogo */
+.dialogo-botones {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.btn-cancelar {
+  flex: 1;
+  background: #f3f4f6 !important;
+  color: #4b5563 !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 10px 0 !important;
+  transition: all 0.2s ease;
+}
+
+.btn-cancelar:hover {
+  background: #e5e7eb !important;
+}
+
+.btn-aceptar {
+  flex: 1;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 10px 0 !important;
+  transition: all 0.2s ease;
+}
+
+.btn-aceptar:hover {
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+/* ================================================================ */
+/* === PANTALLA DE CONFIRMACIÓN (después de registrar)           === */
+/* ================================================================ */
+.confirmacion-wrapper {
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.success-icon-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pop-in 0.4s ease;
+}
+
+.entrada-color { background: linear-gradient(135deg, #059669, #047857); }
+.salida-color  { background: linear-gradient(135deg, #10b981, #059669); }
+
+.success-icon {
+  color: white;
+  font-size: 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.confirmacion-titulo {
+  font-size: 20px;
+  font-weight: 700;
+  color: #065f46;
+  margin: 0;
+  text-align: center;
+}
+
+.detalle-registro {
+  width: 100%;
+  background: #f0fdf4;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detalle-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.detalle-icono {
+  color: #047857;
+  font-size: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.detalle-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detalle-etiqueta {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.detalle-valor {
+  font-size: 15px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.hora-grande {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: #047857 !important;
+  letter-spacing: 1px;
+}
+
+.periodo {
+  font-size: 13px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.mensaje-exito {
+  font-size: 14px;
+  color: #059669;
+  font-weight: 500;
+  text-align: center;
+  margin: 0;
+  padding: 10px 16px;
+  background: #d1fae5;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.acciones-post {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-volver {
+  flex: 1;
+  background: #e5e7eb !important;
+  color: #374151 !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+}
+
+.btn-cerrar-sesion {
+  flex: 1;
+  background: linear-gradient(135deg, #047857, #065f46) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+}
+
+/* ================================================================ */
+/* === PANTALLA INICIAL (selección)                              === */
+/* ================================================================ */
+.form-content {
+  padding: 24px 24px 28px;
+}
+
+.checkin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.usuario-saludo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0fdf4;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.saludo-icono {
+  font-size: 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+  color: #047857;
+}
+
+.saludo-nombre {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.saludo-rol {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.welcome-text {
+  text-align: center;
+  color: #4b5563;
+  font-size: 14px;
+  margin: 0;
+}
+
+.btn-login-premium {
+  width: 100%;
+  padding: 22px 0 !important;
+  font-size: 16px !important;
+  font-weight: 500;
+  border-radius: 8px !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.btn-action-entry {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+}
+
+.btn-action-exit {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.btn-login-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(4, 120, 87, 0.3) !important;
+}
+
+.btn-logout-link {
+  color: #9ca3af !important;
+  font-size: 13px !important;
+  align-self: center;
+}
+
+/* === ANIMACIONES === */
+.animate-spin {
+  animation: spin 20s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pop-in {
+  0%   { transform: scale(0.5); opacity: 0; }
+  80%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* === SPINNER DE CARGA === */
+.cargando-wrapper {
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner-verde ::ng-deep circle {
+  stroke: #047857 !important;
+}
+
+.cargando-texto {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* === ERROR EN DIÁLOGO === */
+.error-registro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  width: 100%;
+}
+
+.error-icono-small {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0;
+}
+
+/* ================================================================ */
+/* === PANTALLA DE CÁMARA                                        === */
+/* ================================================================ */
+.camara-wrapper {
+  padding: 20px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: fade-in 0.25s ease;
+}
+
+.camara-instruccion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0fdf4;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  width: 100%;
+}
+
+.camara-instruccion-icono {
+  font-size: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  color: #047857;
+  flex-shrink: 0;
+}
+
+.camara-instruccion p {
+  margin: 0;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.camara-instruccion strong {
+  color: #047857;
+}
+
+/* Marco de la cámara */
+.camara-preview-container,
+.foto-preview-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.camara-marco {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  aspect-ratio: 4/3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #111;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.camara-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+  transform: scaleX(-1); /* espejo natural */
+}
+
+.foto-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+  transform: scaleX(-1);
+}
+
+/* Cuadro guía para la cara */
+.camara-overlay-cuadro {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 58%;
+  height: 72%;
+  border: 2px dashed rgba(255,255,255,0.55);
+  border-radius: 50% 50% 45% 45%;
+  pointer-events: none;
+}
+
+/* Esquinas decorativas */
+.camara-esquinas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.esquina {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: #34d399;
+  border-style: solid;
+}
+
+.esquina-tl { top: 10px;    left: 10px;   border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.esquina-tr { top: 10px;    right: 10px;  border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.esquina-bl { bottom: 10px; left: 10px;   border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.esquina-br { bottom: 10px; right: 10px;  border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+/* Badge de check cuando la foto está tomada */
+.foto-ok-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: #059669;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pop-in 0.35s ease;
+}
+
+.foto-ok-badge mat-icon {
+  color: white;
+  font-size: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+}
+
+/* Error de cámara */
+.error-camara {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+}
+
+/* Botones de la cámara */
+.camara-botones {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.btn-tomar-foto {
+  flex: 1;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 10px 0 !important;
+}
+
+.btn-tomar-foto:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-repetir {
+  flex: 1;
+  background: #e5e7eb !important;
+  color: #374151 !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding: 10px 0 !important;
+}
+
+.btn-confirmar-foto {
+  flex: 1;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  padding: 10px 0 !important;
+  transition: all 0.2s ease;
+}
+
+.btn-confirmar-foto:hover {
+  box-shadow: 0 4px 14px rgba(4, 120, 87, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+/* ================================================================ */
+/* === FOTO en la pantalla de confirmación final                 === */
+/* ================================================================ */
+.foto-registro-circulo {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #34d399;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+  animation: pop-in 0.4s ease;
+  flex-shrink: 0;
+}
+
+.foto-registro-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}

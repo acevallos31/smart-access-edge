@@ -13,7 +13,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
 
 
+
 // CORS
+
+
+// CORS — permite peticiones desde el frontend Angular
 
 builder.Services.AddCors(options =>
 {
@@ -27,6 +31,7 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
 
 
 // Inyección de Dependencias
@@ -56,7 +61,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+
 app.UseCors("FrontendPolicy");
+=======
+app.UseCors("FrontendPolicy"); // CORS antes de Authorization
+
 
 app.UseAuthorization();
 

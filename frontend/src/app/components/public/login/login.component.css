@@ -151,3 +151,88 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* === MENSAJE DE ERROR === */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  animation: fade-in 0.2s ease;
+}
+
+.error-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0;
+}
+
+/* === SPINNER DENTRO DEL BOTÓN === */
+.spinner-btn {
+  display: inline-block;
+}
+
+.spinner-btn ::ng-deep circle {
+  stroke: white !important;
+}
+
+/* === BOTÓN DESHABILITADO === */
+.btn-login-premium:disabled {
+  opacity: 0.75 !important;
+  cursor: not-allowed;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.links-row { display:flex; justify-content:space-between; margin-top:.5rem; flex-wrap:wrap; }
+.link-btn { color:#6ee7b7 !important; font-size:.85rem; }
+.recuperar-titulo { color:#1b5e20; margin-bottom:.5rem; }
+.recuperar-desc { font-size:.9rem; color:#555; margin-bottom:1.5rem; }
+.recuperar-msg { border-radius:.5rem; padding:.75rem; margin-bottom:1rem; font-size:.9rem; }
+.msg-ok    { background:#e8f5e9; color:#2e7d32; }
+.msg-error { background:#fce4ec; color:#c62828; }
+
+/* ── Demo hints ─────────────────────────────────────────────── */
+.demo-hints {
+  margin-top: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .75rem;
+  padding: .75rem 1rem;
+  font-size: .82rem;
+  background: #f8fafc;
+  color: #475569;
+}
+.demo-hints summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #1565c0;
+  user-select: none;
+}
+.hints-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: .6rem;
+  font-size: .78rem;
+}
+.hints-table th {
+  text-align: left;
+  padding: .3rem .4rem;
+  background: #e2e8f0;
+  color: #334155;
+}
+.hints-table td {
+  padding: .3rem .4rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.hints-table tr:last-child td { border-bottom: none; }
+.demo-hints small { display: block; margin-top: .5rem; color: #94a3b8; }
