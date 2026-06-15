@@ -1,6 +1,6 @@
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
 
 
 WORKDIR /src
@@ -29,7 +29,5 @@ ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
 
-
-CMD sh -c "cp /etc/secrets/firebase-credentials.json /app/Config/firebase-credentials.json 2>/dev/null || true && dotnet SmartAccess.API.dll"
 
 CMD sh -c "cp /etc/secrets/firebase-credentials.json /app/Config/firebase-credentials.json 2>/dev/null || true && dotnet SmartAccess.API.dll"
