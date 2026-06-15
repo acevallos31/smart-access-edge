@@ -63,7 +63,6 @@ app.UseHttpsRedirection();
 
 
 app.UseCors("FrontendPolicy");
-=======
 app.UseCors("FrontendPolicy"); // CORS antes de Authorization
 
 
