@@ -8,11 +8,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
 
-// Inyección de Dependencias
-builder.Services.AddSingleton<FirebaseService>();
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddLogging();
-
 // CORS — permite peticiones desde el frontend Angular
 builder.Services.AddCors(options =>
 {
@@ -27,6 +22,11 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Inyección de Dependencias
+builder.Services.AddSingleton<FirebaseService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddLogging();
+
 var app = builder.Build();
 
 // Middleware
@@ -38,8 +38,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("FrontendPolicy");   // <-- CORS antes de Authorization
+
+app.UseCors("FrontendPolicy"); // CORS antes de Authorization
+
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

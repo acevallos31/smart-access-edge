@@ -1,0 +1,202 @@
+<div class="checkin-wrapper">
+  <div class="checkin-card">
+
+    <!-- HEADER -->
+    <div class="card-header">
+      <div class="header-icon-wrap"><span class="header-icon">🔐</span></div>
+      <div>
+        <h2 class="header-title">Control de Turno</h2>
+        <p class="header-sub">Smart Access Edge</p>
+      </div>
+    </div>
+
+    <!-- ══ SPINNER DE REGISTRO ══════════════════════════════════ -->
+    <div *ngIf="registrando" class="center-block">
+      <div class="spinner-ring"></div>
+      <p class="loading-text">Registrando asistencia...</p>
+      <p class="loading-sub">Guardando ubicación y datos del registro</p>
+    </div>
+
+    <!-- ══ DUPLICADO ════════════════════════════════════════════ -->
+    <div *ngIf="duplicadoVisible" class="center-block">
+      <div class="status-circle warn-circle">🚫</div>
+      <h3 class="status-title">Ya registraste tu entrada</h3>
+      <p class="status-msg">No puedes registrar otra entrada en el mismo turno. Usa "Registrar Salida".</p>
+      <div class="btn-row">
+        <button class="btn-secondary" (click)="paso = 'inicio'; yaRegistrado = false">Continuar</button>
+        <button class="btn-primary" (click)="irDashboard()">Dashboard</button>
+      </div>
+    </div>
+
+    <!-- ══ PANTALLA INICIO ══════════════════════════════════════ -->
+    <div *ngIf="inicioVisible" class="inicio-block">
+      <div class="usuario-pill">
+        <div class="usuario-avatar">{{ nombreUsuario.charAt(0) }}</div>
+        <div>
+          <p class="usuario-name">{{ nombreUsuario }}</p>
+          <p class="usuario-rol">{{ rolUsuario }}</p>
+        </div>
+      </div>
+      <p class="instruccion">Selecciona la acción para tu jornada laboral</p>
+      <button class="btn-accion btn-entrada" (click)="pedirConfirmacion('entrada')">
+        <span class="btn-icon">🟢</span>
+        <span class="btn-label">Registrar Entrada</span>
+        <span class="btn-arrow">→</span>
+      </button>
+      <button class="btn-accion btn-salida" (click)="pedirConfirmacion('salida')">
+        <span class="btn-icon">🔴</span>
+        <span class="btn-label">Registrar Salida</span>
+        <span class="btn-arrow">→</span>
+      </button>
+      <div class="nav-links">
+        <button class="link-btn" (click)="irDashboard()">📊 Dashboard</button>
+        <button class="link-btn" (click)="cerrarSesion()">🚪 Cerrar sesión</button>
+      </div>
+    </div>
+
+    <!-- ══ DIÁLOGO DE CONFIRMACIÓN ══════════════════════════════ -->
+    <div *ngIf="dialogoVisible" class="dialogo-block" [ngClass]="dialogoTipo === 'entrada' ? 'dialogo-entrada' : 'dialogo-salida'">
+      <div class="dialogo-icono-wrap">
+        <span class="dialogo-icono">{{ dialogoTipo === 'entrada' ? '⬇️' : '⬆️' }}</span>
+      </div>
+      <h3 class="dialogo-title">
+        ¿Confirmas registrar tu
+        <span class="dialogo-tipo">{{ dialogoTipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }}</span>?
+      </h3>
+      <p class="dialogo-user">👤 {{ nombreUsuario }} &nbsp;·&nbsp; {{ rolUsuario }}</p>
+      <p class="dialogo-aviso">
+        {{ dialogoTipo === 'entrada'
+            ? 'Se registrará la hora de entrada en este momento.'
+            : 'Se registrará la hora de salida en este momento.' }}
+      </p>
+      <div *ngIf="errorRegistro" class="error-box">⚠️ {{ errorRegistro }}</div>
+      <div class="dialogo-btns">
+        <button class="btn-secondary" (click)="cancelarDialogo()">✕ Cancelar</button>
+        <button class="btn-confirmar" (click)="aceptarDialogo()">✓ Sí, registrar</button>
+      </div>
+    </div>
+
+    <!-- ══ PANTALLA ESCANEO FACIAL ═══════════════════════════════ -->
+    <div *ngIf="escaneandoVisible" class="scan-block">
+
+      <p class="scan-instruccion">{{ mensajeEscaneo }}</p>
+
+      <!-- Marco de cámara con overlay de escaneo -->
+      <div class="scan-frame-wrap">
+        <div class="scan-frame" [ngClass]="{'scan-frame-ok': faceDetectada}">
+          <video #videoRef autoplay playsinline muted class="scan-video"></video>
+          <canvas #canvasRef style="display:none;"></canvas>
+
+          <!-- Esquinas del marco -->
+          <span class="corner tl"></span>
+          <span class="corner tr"></span>
+          <span class="corner bl"></span>
+          <span class="corner br"></span>
+
+          <!-- Línea de escaneo animada -->
+          <div class="scan-line" [ngClass]="{'scan-line-ok': faceDetectada}"></div>
+
+          <!-- Overlay de éxito -->
+          <div *ngIf="faceDetectada" class="scan-ok-overlay">
+            <span class="scan-ok-icon">✅</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de progreso -->
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" [style.width.%]="progresoEscaneo"
+               [ngClass]="{'progress-ok': faceDetectada}"></div>
+        </div>
+        <span class="progress-pct">{{ progresoEscaneo }}%</span>
+      </div>
+
+      <div *ngIf="errorCamara" class="error-box">📵 {{ errorCamara }}</div>
+
+      <button class="btn-secondary mt-1" (click)="cancelarEscaneo()">← Volver</button>
+    </div>
+
+    <!-- ══ CONFIRMACIÓN EXITOSA ══════════════════════════════════ -->
+    <div *ngIf="confirmacionVisible && confirmacion" class="confirm-block">
+
+      <!-- Foto del usuario si existe -->
+      <div *ngIf="confirmacion.fotoUrl" class="confirm-foto-wrap">
+        <img [src]="confirmacion.fotoUrl" alt="Foto del registro" class="confirm-foto" />
+        <span class="confirm-check">✅</span>
+      </div>
+      <div *ngIf="!confirmacion.fotoUrl" class="confirm-icon-wrap"
+           [ngClass]="confirmacion.tipo === 'entrada' ? 'icon-entrada' : 'icon-salida'">
+        {{ confirmacion.tipo === 'entrada' ? '✅' : '✅' }}
+      </div>
+
+      <h3 class="confirm-title">
+        {{ confirmacion.tipo === 'entrada' ? 'Entrada Registrada' : 'Salida Registrada' }}
+      </h3>
+      <p class="confirm-sub">con éxito</p>
+
+      <!-- Detalles del registro -->
+      <div class="confirm-detalles">
+
+        <div class="detalle-row">
+          <span class="detalle-icon">👤</span>
+          <div class="detalle-info">
+            <span class="detalle-label">Empleado</span>
+            <span class="detalle-valor">{{ confirmacion.nombre }}</span>
+          </div>
+        </div>
+
+        <div class="detalle-row">
+          <span class="detalle-icon">🏷️</span>
+          <div class="detalle-info">
+            <span class="detalle-label">Cargo / Rol</span>
+            <span class="detalle-valor">{{ confirmacion.rol }}</span>
+          </div>
+        </div>
+
+        <div class="detalle-row">
+          <span class="detalle-icon">⏰</span>
+          <div class="detalle-info">
+            <span class="detalle-label">Hora de {{ confirmacion.tipo === 'entrada' ? 'entrada' : 'salida' }}</span>
+            <span class="detalle-valor hora-grande">{{ horaFormateada }} <span class="periodo">{{ periodoDelDia }}</span></span>
+          </div>
+        </div>
+
+        <div class="detalle-row">
+          <span class="detalle-icon">📅</span>
+          <div class="detalle-info">
+            <span class="detalle-label">Fecha</span>
+            <span class="detalle-valor">{{ fechaCompleta }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="confirmacion.ubicacion" class="detalle-row">
+          <span class="detalle-icon">📍</span>
+          <div class="detalle-info">
+            <span class="detalle-label">Lugar del registro</span>
+            <span class="detalle-valor">{{ confirmacion.ubicacion.direccion }}</span>
+            <span class="detalle-sub">{{ confirmacion.ubicacion.ciudad }}, {{ confirmacion.ubicacion.pais }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="confirmacion.status" class="detalle-row">
+          <span class="detalle-icon">🏆</span>
+          <div class="detalle-info">
+            <span class="detalle-label">Estado</span>
+            <span class="detalle-valor status-badge" [ngClass]="'status-' + confirmacion.status">
+              {{ confirmacion.status === 'puntual' ? '✓ Puntual' : '⚠ Tardanza' }}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="btn-row mt-1">
+        <button class="btn-secondary" (click)="volverAlInicio()">← Volver</button>
+        <button class="btn-primary" (click)="cerrarSesion()">🚪 Cerrar sesión</button>
+      </div>
+
+    </div>
+
+  </div>
+</div>

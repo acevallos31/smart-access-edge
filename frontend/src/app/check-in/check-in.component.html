@@ -1,0 +1,273 @@
+<div class="login-wrapper">
+  <mat-card class="premium-login-card mat-elevation-z12">
+
+    <!-- BANNER SUPERIOR -->
+    <div class="green-banner-premium">
+      <mat-icon class="banner-icon animate-spin">alarm</mat-icon>
+      <h2>Control de Turno</h2>
+      <p>Smart Access Edge - Registro de Asistencia</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SPINNER: procesando registro                                 -->
+    <!-- ============================================================ -->
+    <div *ngIf="registrando" class="cargando-wrapper">
+      <mat-spinner diameter="48" class="spinner-verde"></mat-spinner>
+      <p class="cargando-texto">Registrando, por favor espera...</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- DIÁLOGO DE CONFIRMACIÓN ("¿Estás seguro?")                   -->
+    <!-- ============================================================ -->
+    <div *ngIf="dialogoVisible" class="dialogo-overlay">
+      <div class="dialogo-box" [ngClass]="dialogoTipo === 'entrada' ? 'dialogo-entrada' : 'dialogo-salida'">
+
+        <div class="dialogo-icono-circulo">
+          <mat-icon class="dialogo-icono">
+            {{ dialogoTipo === 'entrada' ? 'login' : 'logout' }}
+          </mat-icon>
+        </div>
+
+        <h3 class="dialogo-titulo">
+          ¿Estás seguro de registrar
+          <span class="dialogo-tipo-texto">
+            {{ dialogoTipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }}
+          </span>?
+        </h3>
+
+        <p class="dialogo-subtitulo">
+          <mat-icon class="dialogo-user-icon">account_circle</mat-icon>
+          {{ nombreUsuario }} &nbsp;·&nbsp; {{ rolUsuario }}
+        </p>
+
+        <p class="dialogo-aviso">
+          {{ dialogoTipo === 'entrada'
+            ? 'Se registrará tu hora de entrada en este momento.'
+            : 'Se registrará tu hora de salida en este momento.' }}
+        </p>
+
+        <div *ngIf="errorRegistro" class="error-registro">
+          <mat-icon class="error-icono-small">warning</mat-icon>
+          {{ errorRegistro }}
+        </div>
+
+        <div class="dialogo-botones">
+          <button mat-raised-button class="btn-cancelar" (click)="cancelarDialogo()">
+            <mat-icon>close</mat-icon>
+            Cancelar
+          </button>
+          <button mat-raised-button class="btn-aceptar" (click)="aceptarDialogo()">
+            <mat-icon>check_circle</mat-icon>
+            Sí, registrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PANTALLA DE CÁMARA (toma de foto)                            -->
+    <!-- ============================================================ -->
+    <div *ngIf="camaraVisible" class="camara-wrapper">
+
+      <div class="camara-instruccion">
+        <mat-icon class="camara-instruccion-icono">face</mat-icon>
+        <p>
+          Pon tu cara dentro del cuadro para registrar tu
+          <strong>{{ dialogoTipo === 'entrada' ? 'horario de entrada' : 'horario de salida' }}</strong>
+        </p>
+      </div>
+
+      <!-- Vista en vivo de la cámara (visible cuando NO hay foto tomada) -->
+      <div *ngIf="!fotoCapturada" class="camara-preview-container">
+        <div class="camara-marco">
+          <video #videoRef autoplay playsinline muted class="camara-video"></video>
+          <div class="camara-overlay-cuadro"></div>
+          <div class="camara-esquinas">
+            <span class="esquina esquina-tl"></span>
+            <span class="esquina esquina-tr"></span>
+            <span class="esquina esquina-bl"></span>
+            <span class="esquina esquina-br"></span>
+          </div>
+        </div>
+        <canvas #canvasRef style="display:none;"></canvas>
+
+        <div *ngIf="errorCamara" class="error-camara">
+          <mat-icon>videocam_off</mat-icon>
+          {{ errorCamara }}
+        </div>
+      </div>
+
+      <!-- Vista previa de la foto tomada -->
+      <div *ngIf="fotoCapturada" class="foto-preview-container">
+        <div class="camara-marco">
+          <img [src]="fotoCapturada" alt="Foto capturada" class="foto-preview-img" />
+          <div class="foto-ok-badge">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones de la pantalla cámara -->
+      <div class="camara-botones">
+        <button mat-raised-button class="btn-cancelar" (click)="cancelarCamara()">
+          <mat-icon>arrow_back</mat-icon>
+          Atrás
+        </button>
+
+        <!-- Botón TOMAR FOTO (sólo cuando no hay foto y la cámara está activa) -->
+        <button
+          *ngIf="!fotoCapturada"
+          mat-raised-button
+          class="btn-tomar-foto"
+          [disabled]="!camaraActiva"
+          (click)="tomarFoto()">
+          <mat-icon>camera_alt</mat-icon>
+          Tomar Foto
+        </button>
+
+        <!-- Botón REPETIR (si ya tomó foto) -->
+        <button
+          *ngIf="fotoCapturada"
+          mat-raised-button
+          class="btn-repetir"
+          (click)="repetirFoto()">
+          <mat-icon>refresh</mat-icon>
+          Repetir
+        </button>
+
+        <!-- Botón CONFIRMAR (si ya tomó foto) -->
+        <button
+          *ngIf="fotoCapturada"
+          mat-raised-button
+          class="btn-confirmar-foto"
+          (click)="confirmarFotoYRegistrar()">
+          <mat-icon>check_circle</mat-icon>
+          Confirmar
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PANTALLA DE CONFIRMACIÓN (registro exitoso)                  -->
+    <!-- ============================================================ -->
+    <div *ngIf="confirmacionVisible && confirmacion" class="confirmacion-wrapper">
+
+      <!-- Foto tomada (si existe) -->
+      <div *ngIf="confirmacion.fotoUrl" class="foto-registro-circulo">
+        <img [src]="confirmacion.fotoUrl" alt="Foto del registro" class="foto-registro-img" />
+      </div>
+
+      <div *ngIf="!confirmacion.fotoUrl"
+           class="success-icon-circle"
+           [ngClass]="confirmacion.tipo === 'entrada' ? 'entrada-color' : 'salida-color'">
+        <mat-icon class="success-icon">
+          {{ confirmacion.tipo === 'entrada' ? 'login' : 'logout' }}
+        </mat-icon>
+      </div>
+
+      <h3 class="confirmacion-titulo">
+        {{ confirmacion.tipo === 'entrada' ? '✅ Entrada Registrada' : '✅ Salida Registrada' }}
+      </h3>
+
+      <div class="detalle-registro">
+
+        <div class="detalle-fila">
+          <mat-icon class="detalle-icono">person</mat-icon>
+          <div class="detalle-texto">
+            <span class="detalle-etiqueta">Empleado</span>
+            <span class="detalle-valor">{{ confirmacion.nombre }}</span>
+          </div>
+        </div>
+
+        <div class="detalle-fila">
+          <mat-icon class="detalle-icono">badge</mat-icon>
+          <div class="detalle-texto">
+            <span class="detalle-etiqueta">Cargo / Rol</span>
+            <span class="detalle-valor">{{ confirmacion.rol }}</span>
+          </div>
+        </div>
+
+        <div class="detalle-fila">
+          <mat-icon class="detalle-icono">schedule</mat-icon>
+          <div class="detalle-texto">
+            <span class="detalle-etiqueta">
+              Hora de {{ confirmacion.tipo === 'entrada' ? 'entrada' : 'salida' }}
+            </span>
+            <span class="detalle-valor hora-grande">
+              {{ horaFormateada }} <span class="periodo">{{ periodoDelDia }}</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="detalle-fila">
+          <mat-icon class="detalle-icono">calendar_today</mat-icon>
+          <div class="detalle-texto">
+            <span class="detalle-etiqueta">Fecha</span>
+            <span class="detalle-valor">{{ fechaCompleta }}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="mensaje-exito">
+        {{ confirmacion.tipo === 'entrada' ? 'Hora de entrada' : 'Hora de salida' }}
+        registrada con éxito.
+      </p>
+
+      <div class="acciones-post">
+        <button mat-raised-button class="btn-volver" (click)="volverAlInicio()">
+          <mat-icon>arrow_back</mat-icon>
+          Volver
+        </button>
+        <button mat-raised-button class="btn-cerrar-sesion" (click)="cerrarSesion()">
+          <mat-icon>power_settings_new</mat-icon>
+          Cerrar Sesión
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PANTALLA INICIAL (selección de entrada / salida)             -->
+    <!-- ============================================================ -->
+    <mat-card-content
+      *ngIf="inicioVisible"
+      class="form-content">
+      <div class="checkin-actions">
+
+        <div class="usuario-saludo">
+          <mat-icon class="saludo-icono">account_circle</mat-icon>
+          <div>
+            <p class="saludo-nombre">{{ nombreUsuario }}</p>
+            <p class="saludo-rol">{{ rolUsuario }}</p>
+          </div>
+        </div>
+
+        <p class="welcome-text">Selecciona la acción para tu jornada laboral de hoy.</p>
+
+        <button mat-raised-button
+                class="btn-login-premium btn-action-entry"
+                (click)="pedirConfirmacion('entrada')">
+          Registrar Entrada
+          <mat-icon>login</mat-icon>
+        </button>
+
+        <button mat-raised-button
+                class="btn-login-premium btn-action-exit"
+                (click)="pedirConfirmacion('salida')">
+          Registrar Salida
+          <mat-icon>logout</mat-icon>
+        </button>
+
+        <button mat-button class="btn-logout-link" (click)="cerrarSesion()">
+          <mat-icon>power_settings_new</mat-icon>
+          Cerrar Sesión
+        </button>
+
+      </div>
+    </mat-card-content>
+
+  </mat-card>
+</div>
