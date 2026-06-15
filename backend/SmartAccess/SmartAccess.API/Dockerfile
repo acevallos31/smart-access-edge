@@ -1,17 +1,29 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM ubuntu:24.04 AS build
 
 WORKDIR /src
+
+RUN apt-get update && apt-get install -y wget apt-transport-https ca-certificates \
+    && wget https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
+    && dpkg -i packages-microsoft-prod.deb \
+    && apt-get update \
+    && apt-get install -y dotnet-sdk-10.0
 
 COPY SmartAccess.API.csproj .
 RUN dotnet restore SmartAccess.API.csproj
 
 COPY . .
-
 RUN dotnet publish SmartAccess.API.csproj -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM ubuntu:24.04 AS final
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y wget apt-transport-https ca-certificates \
+    && wget https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
+    && dpkg -i packages-microsoft-prod.deb \
+    && apt-get update \
+    && apt-get install -y aspnetcore-runtime-10.0 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
 
