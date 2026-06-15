@@ -13,6 +13,20 @@ builder.Services.AddSingleton<FirebaseService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddLogging();
 
+// CORS — permite peticiones desde el frontend Angular
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendPolicy", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:4200",
+                "https://localhost:4200"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Middleware
@@ -24,6 +38,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("FrontendPolicy");   // <-- CORS antes de Authorization
 app.UseAuthorization();
 app.MapControllers();
 
