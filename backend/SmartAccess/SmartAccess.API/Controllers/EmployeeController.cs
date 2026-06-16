@@ -1,8 +1,5 @@
-﻿using Google.Cloud.Firestore;
-<<<<<<< HEAD
-=======
+using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Authorization;
->>>>>>> fb8cb63facb4d8c4b329d0e299279f4ace0da223
 using Microsoft.AspNetCore.Mvc;
 using SmartAccess.API.DTOs;
 using SmartAccess.API.Services;
@@ -11,10 +8,7 @@ namespace SmartAccess.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-<<<<<<< HEAD
-=======
     [Authorize]
->>>>>>> fb8cb63facb4d8c4b329d0e299279f4ace0da223
     public class EmployeeController : ControllerBase
     {
         private readonly FirebaseService _firebaseService;
