@@ -16,7 +16,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:4200",
-                "https://localhost:4200"
+                "https://localhost:4200",
+                "https://smart-access-edge.vercel.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
