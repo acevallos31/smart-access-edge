@@ -17,6 +17,53 @@ namespace SmartAccess.API.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
+        {
+            if (registerDto == null || string.IsNullOrWhiteSpace(registerDto.Email) || string.IsNullOrWhiteSpace(registerDto.Password))
+            {
+                return BadRequest(new { message = "Email y password son requeridos." });
+            }
+
+            var result = await _authService.RegistrarUsuarioAsync(registerDto);
+            if (!string.IsNullOrWhiteSpace(result.ErrorCode))
+            {
+                return result.ErrorCode switch
+                {
+                    "email-exists" => Conflict(new { message = "El correo ya existe." }),
+                    "invalid-data" => BadRequest(new { message = "Datos inválidos para registro." }),
+                    _ => BadRequest(new { message = "No se pudo registrar el usuario." })
+                };
+            }
+
+            return Ok(new
+            {
+                message = "Usuario registrado correctamente.",
+                user = result.User
+            });
+        }
+
+        [HttpPost("token")]
+        public async Task<IActionResult> GenerarToken([FromBody] TokenRequestDto tokenRequest)
+        {
+            if (tokenRequest == null || string.IsNullOrWhiteSpace(tokenRequest.Email) || string.IsNullOrWhiteSpace(tokenRequest.Password))
+            {
+                return BadRequest(new { message = "Email y password son requeridos." });
+            }
+
+            var token = await _authService.GenerarJwtDesdeCredencialesAsync(tokenRequest);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return Unauthorized(new { message = "Credenciales inválidas o usuario sin hash de contraseña." });
+            }
+
+            return Ok(new
+            {
+                token,
+                tokenType = "Bearer"
+            });
+        }
+
         [HttpPost("login-verificar")]
         public async Task<IActionResult> VerificarToken([FromBody] LoginDto loginDto)
         {
