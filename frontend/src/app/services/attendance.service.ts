@@ -22,25 +22,24 @@ export class AttendanceService {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 
-  private error(op: string) {
-    return catchError((err: any) => throwError(() =>
-      new Error(`[${op}] ${err?.error?.message ?? err?.message ?? 'Error de conexión'}`)
-    ));
+  private handleErr(op: string) {
+    return (err: any): Observable<never> =>
+      throwError(() => new Error(`[${op}] ${err?.error?.message ?? err?.message ?? 'Error de conexión'}`));
   }
 
   getToday(): Observable<AttendanceRecord[]> {
     return this.http.get<AttendanceRecord[]>(`${this.API}/today`, { headers: this.headers() })
-      .pipe(this.error('getToday'));
+      .pipe(catchError(this.handleErr('getToday')));
   }
 
   getByUser(userId: string, dias = 30): Observable<AttendanceRecord[]> {
     return this.http.get<AttendanceRecord[]>(`${this.API}/user/${userId}?dias=${dias}`, { headers: this.headers() })
-      .pipe(this.error('getByUser'));
+      .pipe(catchError(this.handleErr('getByUser')));
   }
 
   getStatistics(): Observable<AttendanceStatistics> {
     return this.http.get<AttendanceStatistics>(`${environment.apiUrl}/reports/statistics`, { headers: this.headers() })
-      .pipe(this.error('getStatistics'));
+      .pipe(catchError(this.handleErr('getStatistics')));
   }
 
   checkDuplicado(userId: string): Observable<boolean> {
@@ -48,8 +47,8 @@ export class AttendanceService {
       `${environment.apiUrl}/auth/check-status/${userId}`,
       { headers: this.headers() }
     ).pipe(
-      map(r => r.checkedIn),
-      this.error('checkDuplicado')
+      map((r: { checkedIn: boolean }) => r.checkedIn),
+      catchError(this.handleErr('checkDuplicado'))
     );
   }
 }

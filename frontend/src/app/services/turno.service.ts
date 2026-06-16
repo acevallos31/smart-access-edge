@@ -44,46 +44,45 @@ export class TurnoService {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 
-  private error(op: string) {
-    return catchError((err: any) => throwError(() =>
-      new Error(`[${op}] ${err?.error?.message ?? 'Error de conexión'}`)
-    ));
+  private handleErr(op: string) {
+    return (err: any): Observable<never> =>
+      throwError(() => new Error(`[${op}] ${err?.error?.message ?? err?.message ?? 'Error de conexión'}`));
   }
 
   getAll(soloActivos?: boolean): Observable<Turno[]> {
     const p = soloActivos !== undefined ? `?soloActivos=${soloActivos}` : '';
     return this.http.get<Turno[]>(`${this.API}${p}`, { headers: this.headers() })
-      .pipe(this.error('getAll'));
+      .pipe(catchError(this.handleErr('getAll')));
   }
 
   getById(id: string): Observable<Turno> {
     return this.http.get<Turno>(`${this.API}/${id}`, { headers: this.headers() })
-      .pipe(this.error('getById'));
+      .pipe(catchError(this.handleErr('getById')));
   }
 
   create(turno: Omit<Turno, 'id'>): Observable<Turno> {
     return this.http.post<Turno>(this.API, turno, { headers: this.headers() })
-      .pipe(this.error('create'));
+      .pipe(catchError(this.handleErr('create')));
   }
 
   update(id: string, turno: Partial<Turno>): Observable<Turno> {
     return this.http.put<Turno>(`${this.API}/${id}`, turno, { headers: this.headers() })
-      .pipe(this.error('update'));
+      .pipe(catchError(this.handleErr('update')));
   }
 
   activate(id: string): Observable<any> {
-    return this.http.patch(`${this.API}/${id}/activate`, {}, { headers: this.headers() })
-      .pipe(this.error('activate'));
+    return this.http.patch<any>(`${this.API}/${id}/activate`, {}, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('activate')));
   }
 
   deactivate(id: string): Observable<any> {
-    return this.http.patch(`${this.API}/${id}/deactivate`, {}, { headers: this.headers() })
-      .pipe(this.error('deactivate'));
+    return this.http.patch<any>(`${this.API}/${id}/deactivate`, {}, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('deactivate')));
   }
 
   delete(id: string): Observable<any> {
-    return this.http.delete(`${this.API}/${id}`, { headers: this.headers() })
-      .pipe(this.error('delete'));
+    return this.http.delete<any>(`${this.API}/${id}`, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('delete')));
   }
 
   getHorarioHoy(turno: Turno): HorarioDia | null {

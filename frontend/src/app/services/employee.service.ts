@@ -22,45 +22,44 @@ export class EmployeeService {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 
-  private error(op: string) {
-    return catchError((err: any) => throwError(() =>
-      new Error(`[${op}] ${err?.error?.message ?? err?.message ?? 'Error de conexión con el servidor'}`)
-    ));
+  private handleErr(op: string) {
+    return (err: any): Observable<never> =>
+      throwError(() => new Error(`[${op}] ${err?.error?.message ?? err?.message ?? 'Error de conexión'}`));
   }
 
   getAll(soloActivos?: boolean): Observable<Employee[]> {
     const p = soloActivos !== undefined ? `?soloActivos=${soloActivos}` : '';
     return this.http.get<Employee[]>(`${this.API}${p}`, { headers: this.headers() })
-      .pipe(this.error('getAll'));
+      .pipe(catchError(this.handleErr('getAll')));
   }
 
   getById(id: string): Observable<Employee> {
     return this.http.get<Employee>(`${this.API}/${id}`, { headers: this.headers() })
-      .pipe(this.error('getById'));
+      .pipe(catchError(this.handleErr('getById')));
   }
 
   create(emp: Employee): Observable<Employee> {
     return this.http.post<Employee>(this.API, emp, { headers: this.headers() })
-      .pipe(this.error('create'));
+      .pipe(catchError(this.handleErr('create')));
   }
 
   update(id: string, emp: Partial<Employee>): Observable<Employee> {
     return this.http.put<Employee>(`${this.API}/${id}`, emp, { headers: this.headers() })
-      .pipe(this.error('update'));
+      .pipe(catchError(this.handleErr('update')));
   }
 
   deactivate(id: string, razon: RazonInactividad = 'despedido', nota?: string): Observable<any> {
-    return this.http.patch(`${this.API}/${id}/deactivate`, { razon, nota }, { headers: this.headers() })
-      .pipe(this.error('deactivate'));
+    return this.http.patch<any>(`${this.API}/${id}/deactivate`, { razon, nota }, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('deactivate')));
   }
 
   activate(id: string): Observable<any> {
-    return this.http.patch(`${this.API}/${id}/activate`, {}, { headers: this.headers() })
-      .pipe(this.error('activate'));
+    return this.http.patch<any>(`${this.API}/${id}/activate`, {}, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('activate')));
   }
 
   delete(id: string): Observable<any> {
-    return this.http.delete(`${this.API}/${id}`, { headers: this.headers() })
-      .pipe(this.error('delete'));
+    return this.http.delete<any>(`${this.API}/${id}`, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('delete')));
   }
 }
