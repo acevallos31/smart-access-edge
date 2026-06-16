@@ -1,18 +1,20 @@
 // ============================================================
-// AUTH SERVICE — Listo para Firebase + Backend
+// AUTH SERVICE — Conectado al backend real
 // ============================================================
-// PARA ACTIVAR FIREBASE:
-//   1. npm install firebase @angular/fire
-//   2. Rellena environment.ts con tus credenciales Firebase
-//   3. En app.module.ts agrega provideFirebaseApp, provideAuth
-//   4. Descomenta el bloque MODO FIREBASE REAL y borra MODO DEMO
+// El backend maneja Firebase. El frontend solo llama al backend.
+//
+// Endpoints usados:
+//   POST /api/Auth/register       → registrar usuario
+//   POST /api/Auth/token          → login con email+password → JWT
+//   POST /api/Auth/login-verificar → verificar token Firebase
+//   POST /api/Auth/check-in       → registrar entrada
+//   POST /api/Auth/check-out      → registrar salida
 // ============================================================
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
-import { from } from 'rxjs';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { UsuarioSesion, esRolAdmin } from '../models/models';
 
@@ -22,12 +24,14 @@ export type { UsuarioSesion };
 export class AuthService {
 
   private readonly SESSION_KEY = 'sae_session';
+  private readonly API = environment.apiUrl;
   private usuarioActual$ = new BehaviorSubject<UsuarioSesion | null>(null);
 
   constructor(private http: HttpClient, private router: Router) {
     this.restaurarSesion();
   }
 
+  // ── Getters ───────────────────────────────────────────────
   get usuario$(): Observable<UsuarioSesion | null> { return this.usuarioActual$.asObservable(); }
   get usuarioActual(): UsuarioSesion | null         { return this.usuarioActual$.getValue(); }
   get estaAutenticado(): boolean                     { return !!this.usuarioActual$.getValue(); }
@@ -35,105 +39,87 @@ export class AuthService {
   get sesionActual(): UsuarioSesion | null           { return this.usuarioActual$.getValue(); }
   obtenerSesion(): UsuarioSesion | null              { return this.usuarioActual$.getValue(); }
 
-  // ── LOGIN ─────────────────────────────────────────────────
-  // ══ MODO DEMO — borra este bloque cuando Firebase esté listo
+  // ── LOGIN — llama a POST /api/Auth/token ──────────────────
+  // El backend verifica el email y password contra Firebase Auth
+  // y devuelve un JWT real si las credenciales son correctas
   login(email: string, password: string): Observable<UsuarioSesion> {
-    const nombre = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    const emailL = email.toLowerCase();
-    let rol: UsuarioSesion['rol'] = 'Empleado';
-    if      (emailL.includes('subjefe'))   rol = 'Subjefe';
-    else if (emailL.includes('jefe'))      rol = 'Jefe';
-    else if (emailL.includes('admin'))     rol = 'Administrador';
-    else if (emailL.includes('contador'))  rol = 'Contador';
-    else if (emailL.includes('asistente')) rol = 'Asistente del Jefe';
-    const demo: UsuarioSesion = { uid: 'demo-' + Date.now(), email, nombre, rol, idToken: 'demo-token' };
-    this.guardarSesion(demo);
-    return of(demo);
-  }
-  // ══ FIN MODO DEMO
-
-  /* ── MODO FIREBASE REAL — descomenta esto cuando Firebase esté configurado
-  login(email: string, password: string): Observable<UsuarioSesion> {
-    // Importa al tope: import { Auth, signInWithEmailAndPassword } from '@angular/fire/auth';
-    // Agrega al constructor: private fireAuth: Auth
-    return from(signInWithEmailAndPassword(this.fireAuth, email, password)).pipe(
-      switchMap(cred => from(cred.user.getIdToken())),
-      switchMap(idToken =>
-        this.http.post<any>(`${environment.apiUrl}/auth/login-verificar`, { idToken }).pipe(
-          map(p => ({ uid: p.userId, email, nombre: p.nombre, rol: p.rol, idToken } as UsuarioSesion)),
-          tap(u => this.guardarSesion(u))
-        )
-      ),
-      catchError(err => throwError(() => new Error(this.traducirError(err.code))))
-    );
-  }
-  */
-
-  // ── REGISTRO ──────────────────────────────────────────────
-  // ══ MODO DEMO
-  register(email: string, password: string, nombre: string): Observable<UsuarioSesion> {
-    const demo: UsuarioSesion = { uid: 'demo-' + Date.now(), email, nombre, rol: 'Empleado', idToken: 'demo-token' };
-    this.guardarSesion(demo);
-    return of(demo);
-  }
-  // ══ FIN MODO DEMO
-
-  /* ── MODO FIREBASE REAL
-  register(email: string, password: string, nombre: string): Observable<UsuarioSesion> {
-    return this.http.post<UsuarioSesion>(`${environment.apiUrl}/auth/register`, { email, password, nombre }).pipe(
+    return this.http.post<{ token: string; tokenType: string }>(
+      `${this.API}/Auth/token`,
+      { email, password }
+    ).pipe(
+      map(res => {
+        // Decodificar el JWT para obtener los datos del usuario
+        const payload = this.decodificarJwt(res.token);
+        const usuario: UsuarioSesion = {
+          uid:      payload?.sub ?? payload?.uid ?? '',
+          email:    payload?.email ?? email,
+          nombre:   payload?.nombre ?? payload?.name ?? email.split('@')[0],
+          rol:      payload?.rol ?? payload?.role ?? 'Empleado',
+          idToken:  res.token
+        };
+        return usuario;
+      }),
       tap(u => this.guardarSesion(u)),
-      catchError(err => throwError(() => new Error(err?.error?.message ?? 'No se pudo crear la cuenta')))
+      catchError(err => throwError(() =>
+        new Error(err?.error?.message ?? 'Correo o contraseña incorrectos')
+      ))
     );
   }
-  */
+
+  // ── REGISTRO — llama a POST /api/Auth/register ────────────
+  // Crea el usuario en Firebase Auth vía el backend
+  register(email: string, password: string, nombre: string): Observable<any> {
+    return this.http.post<any>(
+      `${this.API}/Auth/register`,
+      { email, password, fullName: nombre, name: nombre, rol: 'Empleado' }
+    ).pipe(
+      catchError(err => throwError(() =>
+        new Error(err?.error?.message ?? 'No se pudo crear la cuenta')
+      ))
+    );
+  }
 
   // ── RECUPERAR CONTRASEÑA ──────────────────────────────────
-  // ══ MODO DEMO
   recuperarContrasena(email: string): Observable<void> {
-    console.log('[DEMO] Recuperación simulada para:', email);
-    return of(undefined);
-  }
-  // ══ FIN MODO DEMO
-
-  /* ── MODO FIREBASE REAL
-  recuperarContrasena(email: string): Observable<void> {
-    return this.http.post<void>(`${environment.apiUrl}/auth/reset-password`, { email }).pipe(
-      catchError(err => throwError(() => new Error(err?.error?.message ?? 'Error al enviar correo')))
+    return this.http.post<void>(
+      `${this.API}/Auth/reset-password`,
+      { email }
+    ).pipe(
+      catchError(() => {
+        // Si el endpoint no existe aún, no falla la app
+        console.warn('[Auth] reset-password no disponible aún en el backend');
+        return throwError(() => new Error('Recuperación no disponible aún'));
+      })
     );
   }
-  */
 
-  // ── REGISTRAR ASISTENCIA — va al backend que guarda en Firebase
-  // ══ MODO DEMO
-  registrarAsistencia(
-    tipo: 'entrada' | 'salida',
-    fotoBase64?: string,
-    ubicacion?: { direccion: string; lat: number; lng: number }
-  ): Observable<{ exito: boolean; status?: string; mensaje?: string }> {
-    console.log('[DEMO] Registrando asistencia:', tipo);
-    return of({ exito: true, status: 'puntual', mensaje: `${tipo} registrada (demo)` });
-  }
-  // ══ FIN MODO DEMO
-
-  /* ── MODO FIREBASE REAL
+  // ── REGISTRAR ENTRADA — llama a POST /api/Auth/check-in ───
+  // ── REGISTRAR SALIDA  — llama a POST /api/Auth/check-out ──
   registrarAsistencia(
     tipo: 'entrada' | 'salida',
     fotoBase64?: string,
     ubicacion?: { direccion: string; lat: number; lng: number }
   ): Observable<{ exito: boolean; status?: string; mensaje?: string }> {
     const usuario = this.usuarioActual$.getValue();
-    if (!usuario) return throwError(() => new Error('Sin sesión'));
+    if (!usuario) return throwError(() => new Error('Sin sesión activa'));
+
+    const endpoint = tipo === 'entrada' ? 'check-in' : 'check-out';
+
     return this.http.post<any>(
-      `${environment.apiUrl}/attendance/check-in`,
-      { userId: usuario.uid, employeeId: usuario.uid, eventType: tipo,
-        captureUrl: fotoBase64, ubicacion: ubicacion?.direccion,
-        lat: ubicacion?.lat, lng: ubicacion?.lng },
+      `${this.API}/Auth/${endpoint}`,
+      { userId: usuario.uid },
       { headers: { Authorization: `Bearer ${usuario.idToken}` } }
     ).pipe(
-      catchError(err => throwError(() => new Error(err?.error?.message ?? 'Error al registrar')))
+      map(() => ({
+        exito: true,
+        status: 'puntual',
+        mensaje: `${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada correctamente`
+      })),
+      catchError(err => throwError(() =>
+        new Error(err?.error?.message ?? `Error al registrar ${tipo}`)
+      ))
     );
   }
-  */
 
   // ── LOGOUT ────────────────────────────────────────────────
   logout(): void {
@@ -142,7 +128,7 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  // ── Sesión en sessionStorage (no persiste al cerrar ventana)
+  // ── Helpers privados ──────────────────────────────────────
   private guardarSesion(u: UsuarioSesion): void {
     sessionStorage.setItem(this.SESSION_KEY, JSON.stringify(u));
     this.usuarioActual$.next(u);
@@ -155,12 +141,15 @@ export class AuthService {
     } catch { sessionStorage.removeItem(this.SESSION_KEY); }
   }
 
-  private traducirError(code: string): string {
-    const mapa: Record<string, string> = {
-      'auth/user-not-found': 'No existe una cuenta con ese correo.',
-      'auth/wrong-password': 'Contraseña incorrecta.',
-      'auth/invalid-email':  'El correo no tiene formato válido.',
-    };
-    return mapa[code] ?? 'Error de autenticación.';
+  // Decodifica el payload del JWT sin librería externa
+  private decodificarJwt(token: string): any {
+    try {
+      const base64 = token.split('.')[1]
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+      return JSON.parse(atob(base64));
+    } catch {
+      return null;
+    }
   }
 }
