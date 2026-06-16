@@ -6,18 +6,31 @@ namespace SmartAccess.API.Services
     {
         private readonly FirestoreDb _firestoreDb;
 
-        public FirebaseService(IConfiguration configuration)
+        public FirebaseService(IConfiguration configuration, IWebHostEnvironment environment)
         {
             var projectId = configuration["Firebase:ProjectId"] ?? "smart-access-edge";
-            var credentialPath = configuration["Firebase:CredentialPath"] ?? 
-                Path.Combine(AppContext.BaseDirectory, "Config/firebase-credentials.json");
+
+            var credentialPath = configuration["Firebase:CredentialPath"]
+                ?? Path.Combine("Config", "firebase-credentials.json");
+
+            if (!Path.IsPathRooted(credentialPath))
+            {
+                credentialPath = Path.Combine(environment.ContentRootPath, credentialPath);
+            }
 
             Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialPath);
+
             _firestoreDb = FirestoreDb.Create(projectId);
         }
 
-        public FirestoreDb GetFirestoreDb() => _firestoreDb;
+        public FirestoreDb GetFirestoreDb()
+        {
+            return _firestoreDb;
+        }
 
-        public CollectionReference GetCollection(string collectionName) => _firestoreDb.Collection(collectionName);
+        public CollectionReference GetCollection(string collectionName)
+        {
+            return _firestoreDb.Collection(collectionName);
+        }
     }
 }

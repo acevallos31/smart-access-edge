@@ -27,7 +27,11 @@ builder.Services.AddCors(options =>
 // Inyección de Dependencias
 builder.Services.AddSingleton<FirebaseService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddLogging();
+
 
 var app = builder.Build();
 
@@ -52,5 +56,6 @@ app.MapControllers();
 
 app.MapGet("/", () => "Smart Access Edge API running");
 app.MapGet("/healthz", () => Results.Ok("Healthy"));
+
 
 app.Run();
