@@ -1,5 +1,5 @@
 // ============================================================
-// EMPLOYEE SERVICE — llama al backend /api/employees
+// EMPLOYEE SERVICE — llama al backend /api/Employee
 // La lógica de negocio está en el backend (.NET)
 // ============================================================
 import { Injectable } from '@angular/core';
@@ -14,7 +14,7 @@ import { StorageService } from './storage.service';
 @Injectable({ providedIn: 'root' })
 export class EmployeeService {
 
-  private readonly API = `${environment.apiUrl}/employees`;
+  private readonly API = `${environment.apiUrl}/Employee`;
 
   constructor(
     private http:    HttpClient,
