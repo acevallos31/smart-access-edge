@@ -42,8 +42,8 @@ app.MapScalarApiReference();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// En Render no usamos redirección HTTPS interna
-if (!app.Environment.IsProduction())
+// Solo en producción para evitar errores de redirect en local http
+if (app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
 }
