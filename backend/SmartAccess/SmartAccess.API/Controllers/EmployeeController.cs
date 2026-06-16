@@ -1,44 +1,150 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Google.Cloud.Firestore;
+using Microsoft.AspNetCore.Mvc;
+using SmartAccess.API.DTOs;
+using SmartAccess.API.Services;
 
 namespace SmartAccess.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")] // La ruta será: api/Employee
+    [Route("api/[controller]")]
     public class EmployeeController : ControllerBase
     {
-        // GET: api/Employee
+        private readonly FirebaseService _firebaseService;
+
+        public EmployeeController(FirebaseService firebaseService)
+        {
+            _firebaseService = firebaseService;
+        }
+
         [HttpGet]
-        public IActionResult GetAllEmployees()
+        public async Task<IActionResult> GetAllEmployees()
         {
-            return Ok(new { message = "Lista de empleados" });
+            var snapshot = await _firebaseService
+                .GetCollection("Employees")
+                .GetSnapshotAsync();
+
+            var employees = snapshot.Documents.Select(doc =>
+            {
+                var data = doc.ToDictionary();
+                data["id"] = doc.Id;
+                return data;
+            });
+
+            return Ok(employees);
         }
 
-        // GET: api/Employee/{id}
         [HttpGet("{id}")]
-        public IActionResult GetEmployeeById(int id)
+        public async Task<IActionResult> GetEmployeeById(string id)
         {
-            return Ok(new { message = $"Detalles del empleado con ID: {id}" });
+            var snapshot = await _firebaseService
+                .GetCollection("Employees")
+                .Document(id)
+                .GetSnapshotAsync();
+
+            if (!snapshot.Exists)
+            {
+                return NotFound(new { message = "Empleado no encontrado" });
+            }
+
+            var data = snapshot.ToDictionary();
+            data["id"] = snapshot.Id;
+
+            return Ok(data);
         }
 
-        // POST: api/Employee
         [HttpPost]
-        public IActionResult CreateEmployee([FromBody] object employeeData)
+        public async Task<IActionResult> CreateEmployee([FromBody] EmployeeDto employee)
         {
-            return Ok(new { message = "Empleado creado con éxito", data = employeeData });
+            var id = Guid.NewGuid().ToString();
+
+            var employeeData = new Dictionary<string, object>
+            {
+                ["nombre"] = employee.Nombre,
+                ["departamento"] = employee.Departamento,
+                ["cargo"] = employee.Cargo,
+                ["horarioAsignado"] = employee.HorarioAsignado,
+                ["fotoReferenciaUrl"] = employee.FotoReferenciaUrl,
+                ["activo"] = employee.Activo ?? true,
+                ["id"] = id,
+                ["createdAt"] = Timestamp.GetCurrentTimestamp()
+            };
+
+            var saveTask = _firebaseService
+                .GetCollection("Employees")
+                .Document(id)
+                .SetAsync(employeeData);
+
+            var completedTask = await Task.WhenAny(saveTask, Task.Delay(TimeSpan.FromSeconds(10)));
+
+            if (completedTask != saveTask)
+            {
+                return StatusCode(504, new
+                {
+                    message = "Firebase no respondio despues de 10 segundos"
+                });
+            }
+
+            await saveTask;
+
+            return Ok(new
+            {
+                message = "Empleado guardado en Firebase",
+                id,
+                data = employeeData
+            });
         }
 
-        // PUT: api/Employee/{id}
         [HttpPut("{id}")]
-        public IActionResult UpdateEmployee(int id, [FromBody] object updatedData)
+        public async Task<IActionResult> UpdateEmployee(string id, [FromBody] Dictionary<string, object> updatedData)
         {
-            return Ok(new { message = $"Empleado {id} actualizado" });
+            var docRef = _firebaseService
+                .GetCollection("Employees")
+                .Document(id);
+
+            var snapshot = await docRef.GetSnapshotAsync();
+
+            if (!snapshot.Exists)
+            {
+                return NotFound(new { message = "Empleado no encontrado" });
+            }
+
+            updatedData["updatedAt"] = Timestamp.GetCurrentTimestamp();
+
+            await docRef.SetAsync(updatedData, SetOptions.MergeAll);
+
+            return Ok(new
+            {
+                message = "Empleado actualizado",
+                id,
+                data = updatedData
+            });
         }
 
-        // DELETE: api/Employee/{id}
         [HttpDelete("{id}")]
-        public IActionResult DeleteEmployee(int id)
+        public async Task<IActionResult> DeleteEmployee(string id)
         {
-            return Ok(new { message = $"Empleado {id} eliminado" });
+            var docRef = _firebaseService
+                .GetCollection("Employees")
+                .Document(id);
+
+            var snapshot = await docRef.GetSnapshotAsync();
+
+            if (!snapshot.Exists)
+            {
+                return NotFound(new { message = "Empleado no encontrado" });
+            }
+
+            await docRef.UpdateAsync(new Dictionary<string, object>
+            {
+                { "activo", false },
+                { "deactivatedAt", Timestamp.GetCurrentTimestamp() }
+            });
+
+            return Ok(new
+            {
+                message = "Empleado desactivado",
+                id
+            });
         }
     }
 }

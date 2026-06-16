@@ -1,3 +1,4 @@
+using Scalar.AspNetCore;
 using SmartAccess.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,14 +9,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
 
-// CORS — permite peticiones desde el frontend Angular
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
         policy.WithOrigins(
                 "http://localhost:4200",
-                "https://localhost:4200"
+                "https://localhost:4200",
+                "https://smart-access-edge.vercel.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -25,24 +27,35 @@ builder.Services.AddCors(options =>
 // Inyección de Dependencias
 builder.Services.AddSingleton<FirebaseService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddLogging();
+
 
 var app = builder.Build();
 
-// Middleware
-if (app.Environment.IsDevelopment())
+// OpenAPI / Scalar / Swagger disponibles también en Render
+app.MapOpenApi();
+app.MapScalarApiReference();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+// Solo en producción para evitar errores de redirect en local http
+if (app.Environment.IsProduction())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-    app.MapOpenApi();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
-
-app.UseCors("FrontendPolicy"); // CORS antes de Authorization
+app.UseCors("FrontendPolicy");
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapGet("/", () => "Smart Access Edge API running");
+app.MapGet("/healthz", () => Results.Ok("Healthy"));
+
 
 app.Run();

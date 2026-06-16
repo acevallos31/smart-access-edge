@@ -10,5 +10,5 @@ export const environment = {
     appId:             'TU_APP_ID'
   },
 
-  apiUrl: 'https://TU_BACKEND_URL/api'
+  apiUrl: 'https://smart-access-edge.onrender.com/api'
 };
