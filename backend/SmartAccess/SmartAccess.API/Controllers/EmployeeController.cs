@@ -1,44 +1,39 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Google.Cloud.Firestore;
+using Microsoft.AspNetCore.Mvc;
+using SmartAccess.API.Services;
 
 namespace SmartAccess.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")] // La ruta será: api/Employee
+    [Route("api/[controller]")]
     public class EmployeeController : ControllerBase
     {
-        // GET: api/Employee
-        [HttpGet]
-        public IActionResult GetAllEmployees()
+        private readonly FirebaseService _firebaseService;
+
+        public EmployeeController(FirebaseService firebaseService)
         {
-            return Ok(new { message = "Lista de empleados" });
+            _firebaseService = firebaseService;
         }
 
-        // GET: api/Employee/{id}
-        [HttpGet("{id}")]
-        public IActionResult GetEmployeeById(int id)
-        {
-            return Ok(new { message = $"Detalles del empleado con ID: {id}" });
-        }
-
-        // POST: api/Employee
         [HttpPost]
-        public IActionResult CreateEmployee([FromBody] object employeeData)
+        public async Task<IActionResult> CreateEmployee([FromBody] Dictionary<string, object> employeeData)
         {
-            return Ok(new { message = "Empleado creado con éxito", data = employeeData });
-        }
+            var id = Guid.NewGuid().ToString();
 
-        // PUT: api/Employee/{id}
-        [HttpPut("{id}")]
-        public IActionResult UpdateEmployee(int id, [FromBody] object updatedData)
-        {
-            return Ok(new { message = $"Empleado {id} actualizado" });
-        }
+            employeeData["id"] = id;
+            employeeData["createdAt"] = Timestamp.GetCurrentTimestamp();
 
-        // DELETE: api/Employee/{id}
-        [HttpDelete("{id}")]
-        public IActionResult DeleteEmployee(int id)
-        {
-            return Ok(new { message = $"Empleado {id} eliminado" });
+            await _firebaseService
+                .GetCollection("Employees")
+                .Document(id)
+                .SetAsync(employeeData);
+
+            return Ok(new
+            {
+                message = "Empleado guardado en Firebase",
+                id,
+                data = employeeData
+            });
         }
     }
 }
