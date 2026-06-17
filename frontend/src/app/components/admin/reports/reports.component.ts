@@ -26,7 +26,7 @@ import { AttendanceStatistics } from '../../../models/models';
 <div class="admin-layout">
   <aside class="sidebar">
     <div class="sidebar-brand"><mat-icon>fingerprint</mat-icon><span>Smart Access Edge</span></div>
-    <div class="sidebar-role">Administrador</div>
+    <div class="sidebar-role">{{ auth.usuarioActual?.rol }}</div>
     <nav class="sidebar-nav">
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/employees'])"><mat-icon>group</mat-icon> Empleados</button>
@@ -247,7 +247,10 @@ export class ReportsComponent implements OnInit {
   ngOnInit() { this.cargar(); }
 
   cargar() {
-    this.attendance.getStatistics().subscribe(s => this.stats = s);
+    this.attendance.getStatistics(this.periodo as 'semana' | 'mes').subscribe({
+      next: s => this.stats = s,
+      error: err => console.error('[Reportes] Error cargando:', err)
+    });
   }
 
   calcPct(parte: number, total: number): number {

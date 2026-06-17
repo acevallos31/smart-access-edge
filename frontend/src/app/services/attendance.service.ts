@@ -37,9 +37,11 @@ export class AttendanceService {
       .pipe(catchError(this.handleErr('getByUser')));
   }
 
-  getStatistics(): Observable<AttendanceStatistics> {
-    return this.http.get<AttendanceStatistics>(`${environment.apiUrl}/reports/statistics`, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('getStatistics')));
+  getStatistics(periodo: 'semana' | 'mes' = 'semana'): Observable<AttendanceStatistics> {
+    return this.http.get<AttendanceStatistics>(
+      `${environment.apiUrl}/reports/statistics?periodo=${periodo}`,
+      { headers: this.headers() }
+    ).pipe(catchError(this.handleErr('getStatistics')));
   }
 
   checkDuplicado(userId: string): Observable<boolean> {

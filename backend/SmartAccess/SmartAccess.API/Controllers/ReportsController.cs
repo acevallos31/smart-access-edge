@@ -15,7 +15,7 @@ public class ReportsController : ControllerBase
     }
 
     [HttpGet("statistics")]
-    public async Task<IActionResult> GetStatistics()
+    public async Task<IActionResult> GetStatistics([FromQuery] string periodo = "semana")
     {
         var stats = await _reportService.GetTodayStatisticsAsync();
         return Ok(stats);
