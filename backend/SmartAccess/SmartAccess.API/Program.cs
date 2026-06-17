@@ -80,6 +80,9 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<PhotoService>();
+builder.Services.AddScoped<FaceVerificationService>();
+builder.Services.AddHttpClient();
 builder.Services.AddLogging();
 
 var app = builder.Build();
