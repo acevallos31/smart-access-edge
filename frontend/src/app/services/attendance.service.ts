@@ -49,8 +49,24 @@ export class AttendanceService {
   }
 
   getByUser(userId: string, dias = 30): Observable<AttendanceRecord[]> {
-    return this.http.get<AttendanceRecord[]>(`${this.API}/user/${userId}?dias=${dias}`, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('getByUser')));
+    return this.http.get<any[]>(`${this.API}/user/${userId}?dias=${dias}`, { headers: this.headers() })
+      .pipe(
+        map((rows: any[]) => (rows ?? []).map(r => ({
+          id: r.id,
+          userId: r.userId ?? r.UserId ?? userId,
+          userName: r.userName ?? r.UserName ?? 'Empleado',
+          employeeId: r.employeeId ?? r.userId ?? r.UserId ?? userId,
+          departamento: r.departamento ?? r.Departamento ?? r.department ?? r.Department ?? 'General',
+          department: r.department ?? r.Department ?? r.departamento ?? r.Departamento ?? 'General',
+          eventType: (r.eventType ?? r.EventType ?? r.tipo ?? r.Tipo ?? 'entrada') as 'entrada' | 'salida',
+          scheduledTime: r.scheduledTime ?? r.ScheduledTime ?? '--:--',
+          recordedTime: r.recordedTime ?? r.RecordedTime ?? '--:--',
+          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente',
+          captureUrl: r.captureUrl ?? r.CaptureUrl,
+          timestamp: r.timestamp ?? r.Timestamp
+        } as AttendanceRecord))),
+        catchError(this.handleErr('getByUser'))
+      );
   }
 
   getStatistics(periodo: 'semana' | 'mes' = 'semana'): Observable<AttendanceStatistics> {

@@ -126,22 +126,20 @@ export class AuthService {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
 
     return this.http.post<any>(
-      `${this.API}/face/check-in`,
+      `${this.API}/attendance/verify-face`,
       {
         UserId: usuario.uid,
-        ImageBase64: fotoBase64,
+        CapturePhotoBase64: fotoBase64,
         EventType: tipo,
-        ContentType: 'image/jpeg',
-        Threshold: 0.75,
         StrictMode: strictMode
       },
       { headers }
     ).pipe(
       map(resp => ({
         exito: resp?.success ?? false,
-        verified: resp?.matched ?? true,
+        verified: resp?.verified ?? resp?.success ?? true,
         distance: resp?.distance,
-        confidence: resp?.score ?? resp?.confidence,
+        confidence: resp?.confidence,
         status: resp?.status,
         mensaje: resp?.message ?? 'Verificación facial completada'
       })),
