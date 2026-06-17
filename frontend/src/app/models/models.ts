@@ -21,8 +21,8 @@ export interface UsuarioSesion {
   email: string;
   nombre: string;
   rol: RolSistema | string;
-  idToken: string;
-  token?: string;       // JWT del backend
+  token?: string;       // JWT del backend (estilo clase)
+  idToken?: string;     // compatibilidad con implementación anterior
   checkedIn?: boolean;  // si ya registró entrada en el turno actual
   lastRecord?: string;  // descripción del último registro
 }

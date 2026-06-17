@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAccess.API.DTOs;
 using SmartAccess.API.Services;
@@ -44,6 +45,7 @@ namespace SmartAccess.API.Controllers
         }
 
         [HttpPost("token")]
+        [HttpPost("login")]  // Alias para frontend compatibility
         public async Task<IActionResult> GenerarToken([FromBody] TokenRequestDto tokenRequest)
         {
             if (tokenRequest == null || string.IsNullOrWhiteSpace(tokenRequest.Email) || string.IsNullOrWhiteSpace(tokenRequest.Password))
@@ -85,6 +87,7 @@ namespace SmartAccess.API.Controllers
         }
 
         [HttpPost("check-in")]
+        [Authorize]
         public async Task<IActionResult> CheckIn([FromBody] CheckInDto checkInDto)
         {
             if (checkInDto == null || string.IsNullOrWhiteSpace(checkInDto.UserId))
@@ -98,10 +101,11 @@ namespace SmartAccess.API.Controllers
                 return StatusCode(500, new { message = "Error actualizando check-in." });
             }
 
-            return Ok(new { message = "Check-in registrado correctamente." });
+            return Ok(new { success = true, message = "Check-in registrado correctamente.", eventType = "entrada" });
         }
 
         [HttpPost("check-out")]
+        [Authorize]
         public async Task<IActionResult> CheckOut([FromBody] CheckInDto checkInDto)
         {
             if (checkInDto == null || string.IsNullOrWhiteSpace(checkInDto.UserId))
@@ -115,7 +119,7 @@ namespace SmartAccess.API.Controllers
                 return StatusCode(500, new { message = "Error actualizando check-out." });
             }
 
-            return Ok(new { message = "Check-out registrado correctamente." });
+            return Ok(new { success = true, message = "Check-out registrado correctamente.", eventType = "salida" });
         }
     }
 }

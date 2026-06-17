@@ -17,7 +17,7 @@ export const environment = {
     appId:             'TU_APP_ID'
   },
 
-  // ── URL del backend ───────────────────────────────────────
+  // URL del backend 
   // Local:      http://localhost:5000/api
   // Producción: https://smart-access-edge.onrender.com/api
   apiUrl: 'http://localhost:5160/api'

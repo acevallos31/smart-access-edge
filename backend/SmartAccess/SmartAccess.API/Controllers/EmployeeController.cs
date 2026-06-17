@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartAccess.API.DTOs;
 using SmartAccess.API.Services;
+using System.Text.Json;
 
 namespace SmartAccess.API.Controllers
 {
@@ -99,6 +100,11 @@ namespace SmartAccess.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateEmployee(string id, [FromBody] Dictionary<string, object> updatedData)
         {
+            if (updatedData == null || updatedData.Count == 0)
+            {
+                return BadRequest(new { message = "Debe enviar al menos un campo para actualizar." });
+            }
+
             var docRef = _firebaseService
                 .GetCollection("Employees")
                 .Document(id);
@@ -110,15 +116,19 @@ namespace SmartAccess.API.Controllers
                 return NotFound(new { message = "Empleado no encontrado" });
             }
 
-            updatedData["updatedAt"] = Timestamp.GetCurrentTimestamp();
+            var normalizedData = updatedData.ToDictionary(
+                kvp => kvp.Key,
+                kvp => ConvertToFirestoreValue(kvp.Value));
 
-            await docRef.SetAsync(updatedData, SetOptions.MergeAll);
+            normalizedData["updatedAt"] = Timestamp.GetCurrentTimestamp();
+
+            await docRef.SetAsync(normalizedData, SetOptions.MergeAll);
 
             return Ok(new
             {
                 message = "Empleado actualizado",
                 id,
-                data = updatedData
+                data = normalizedData
             });
         }
 
@@ -147,6 +157,39 @@ namespace SmartAccess.API.Controllers
                 message = "Empleado desactivado",
                 id
             });
+        }
+
+        private static object? ConvertToFirestoreValue(object? value)
+        {
+            if (value is null)
+            {
+                return null;
+            }
+
+            if (value is JsonElement jsonElement)
+            {
+                return ConvertJsonElement(jsonElement);
+            }
+
+            return value;
+        }
+
+        private static object? ConvertJsonElement(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Object => element.EnumerateObject()
+                    .ToDictionary(p => p.Name, p => ConvertJsonElement(p.Value)),
+                JsonValueKind.Array => element.EnumerateArray()
+                    .Select(ConvertJsonElement)
+                    .ToList(),
+                JsonValueKind.String => element.GetString(),
+                JsonValueKind.Number => element.TryGetInt64(out var l) ? l : element.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => null
+            };
         }
     }
 }

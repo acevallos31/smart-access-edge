@@ -9,7 +9,9 @@ namespace SmartAccess.API.DTOs
         [MinLength(1, ErrorMessage = "Debe incluir al menos un día laboral.")]
         // Ejemplo esperado: [1, 2, 3, 4, 5] (donde 1 = Lunes y 5 = Viernes)
         public List<int> DiasLaborables { get; set; } = new List<int>();
-        public object UserId { get; internal set; }
-        public string UsuarioId { get; internal set; }
+        [Required]
+        public required object UserId { get; set; }
+        [Required]
+        public required string UsuarioId { get; set; }
     }
 }
