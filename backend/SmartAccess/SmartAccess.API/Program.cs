@@ -82,17 +82,15 @@ builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddLogging();
 
-
 var app = builder.Build();
 
-// OpenAPI / Scalar / Swagger disponibles también en Render
+// OpenAPI / Scalar / Swagger
 app.MapOpenApi();
 app.MapScalarApiReference();
 
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Solo en producción para evitar errores de redirect en local http
 if (app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
@@ -107,6 +105,5 @@ app.MapControllers();
 
 app.MapGet("/", () => "Smart Access Edge API running");
 app.MapGet("/healthz", () => Results.Ok("Healthy"));
-
 
 app.Run();

@@ -322,16 +322,16 @@ export class RegisterComponent implements OnDestroy {
     if (!this.fotoCapturada) return;
     this.paso = 'registrando';
     this.auth.register(this.email, this.password, this.nombre).subscribe({
-      next: (usuario) => {
-        // Guardar foto de rostro asociada al uid
-        if (this.fotoCapturada) {
-          this.storage.guardarFotoRostro(usuario.uid, this.fotoCapturada);
-        }
-        this.router.navigate(['/employee/dashboard']);
+      next: () => {
+        // Registro exitoso — hacer login automatico
+        this.auth.login(this.email, this.password).subscribe({
+          next: () => this.router.navigate(['/employee/dashboard']),
+          error: () => this.router.navigate(['/login'])
+        });
       },
-      error: (msg: string) => {
+      error: (err: any) => {
         this.paso = 'datos';
-        this.errorMsg = msg ?? 'Error al crear la cuenta.';
+        this.errorMsg = err?.message ?? 'Error al crear la cuenta. Intenta de nuevo.';
       }
     });
   }

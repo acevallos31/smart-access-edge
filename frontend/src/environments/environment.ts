@@ -1,27 +1,24 @@
 // ============================================================
-// CONFIGURACIÓN DE FIREBASE — RELLENA AQUÍ TUS CREDENCIALES
+// CONFIGURACIÓN DEL ENTORNO — Smart Access Edge
 // ============================================================
-// Pasos:
-// 1. Ve a https://console.firebase.google.com/
-// 2. Entra a tu proyecto → ⚙️ Configuración del proyecto
-// 3. En "Tus apps" selecciona tu app web (o crea una nueva)
-// 4. Copia el objeto firebaseConfig y pega los valores abajo
+// IMPORTANTE: Los valores de firebaseConfig los pone tu
+// compañero en las variables de entorno de Vercel.
+// Para desarrollo local, pídele los valores y ponlos aquí.
 // ============================================================
-
 export const environment = {
   production: false,
 
   firebaseConfig: {
     apiKey:            'TU_API_KEY_AQUI',
-    authDomain:        'TU_PROJECT_ID.firebaseapp.com',
-    projectId:         'TU_PROJECT_ID',
-    storageBucket:     'TU_PROJECT_ID.appspot.com',
+    authDomain:        'smart-access-edge.firebaseapp.com',
+    projectId:         'smart-access-edge',
+    storageBucket:     'smart-access-edge.appspot.com',
     messagingSenderId: 'TU_MESSAGING_SENDER_ID',
     appId:             'TU_APP_ID'
   },
 
-  // ── URL del backend ASP.NET Core ──
-  // Desarrollo local: http://localhost:5160
-  // Producción: https://tu-dominio.com
+  // URL del backend 
+  // Local:      http://localhost:5000/api
+  // Producción: https://smart-access-edge.onrender.com/api
   apiUrl: 'http://localhost:5160/api'
 };

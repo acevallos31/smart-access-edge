@@ -1,4 +1,4 @@
-﻿namespace SmartAccess.API.DTOs
+namespace SmartAccess.API.DTOs
 {
     public class RegisterDto
     {
