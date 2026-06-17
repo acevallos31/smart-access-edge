@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/reports")]
 [Authorize]
-    public class ReportsController : ControllerBase
+public class ReportsController : ControllerBase
 {
     [HttpGet("statistics")]
     public IActionResult GetStatistics()

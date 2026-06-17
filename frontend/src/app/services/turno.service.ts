@@ -1,9 +1,9 @@
 // ============================================================
-// TURNO SERVICE — Frontend llama al backend /api/turnos
+// TURNO SERVICE — Solo backend, sin fallback local
 // ============================================================
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -30,7 +30,7 @@ export interface Turno {
   createdBy?: string;
 }
 
-const DIAS_SEM = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'] as const;
+const DIAS = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'] as const;
 
 @Injectable({ providedIn: 'root' })
 export class TurnoService {
@@ -44,81 +44,50 @@ export class TurnoService {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 
-  // ── CRUD ────────────────────────────────────────────────────
-  getAll(soloActivos?: boolean): Observable<Turno[]> {
-    const params = soloActivos !== undefined ? `?soloActivos=${soloActivos}` : '';
-    return this.http.get<Turno[]>(`${this.API}${params}`, { headers: this.headers() })
-      .pipe(catchError(() => of(this.turnosDemoFallback())));
+  private handleErr(op: string) {
+    return (err: any): Observable<never> =>
+      throwError(() => new Error(`[${op}] ${err?.error?.message ?? err?.message ?? 'Error de conexión'}`));
   }
 
-  getById(id: string): Observable<Turno | null> {
+  getAll(soloActivos?: boolean): Observable<Turno[]> {
+    const p = soloActivos !== undefined ? `?soloActivos=${soloActivos}` : '';
+    return this.http.get<Turno[]>(`${this.API}${p}`, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('getAll')));
+  }
+
+  getById(id: string): Observable<Turno> {
     return this.http.get<Turno>(`${this.API}/${id}`, { headers: this.headers() })
-      .pipe(catchError(() => of(null)));
+      .pipe(catchError(this.handleErr('getById')));
   }
 
   create(turno: Omit<Turno, 'id'>): Observable<Turno> {
-    return this.http.post<Turno>(this.API, turno, { headers: this.headers() });
+    return this.http.post<Turno>(this.API, turno, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('create')));
   }
 
   update(id: string, turno: Partial<Turno>): Observable<Turno> {
-    return this.http.put<Turno>(`${this.API}/${id}`, turno, { headers: this.headers() });
+    return this.http.put<Turno>(`${this.API}/${id}`, turno, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('update')));
   }
 
   activate(id: string): Observable<any> {
-    return this.http.patch(`${this.API}/${id}/activate`, {}, { headers: this.headers() });
+    return this.http.patch<any>(`${this.API}/${id}/activate`, {}, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('activate')));
   }
 
   deactivate(id: string): Observable<any> {
-    return this.http.patch(`${this.API}/${id}/deactivate`, {}, { headers: this.headers() });
+    return this.http.patch<any>(`${this.API}/${id}/deactivate`, {}, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('deactivate')));
   }
 
   delete(id: string): Observable<any> {
-    return this.http.delete(`${this.API}/${id}`, { headers: this.headers() });
+    return this.http.delete<any>(`${this.API}/${id}`, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('delete')));
   }
 
-  // ── Helper: horario del turno para hoy ─────────────────────
   getHorarioHoy(turno: Turno): HorarioDia | null {
-    const diaNom = DIAS_SEM[new Date().getDay()] as keyof Turno;
-    const horario = turno[diaNom] as HorarioDia | undefined;
-    return horario?.trabaja ? horario : null;
-  }
-
-  // ── Fallback demo (cuando no hay backend activo) ─────────────
-  private turnosDemoFallback(): Turno[] {
-    return [
-      {
-        id: 'turno-manana', nombre: 'Turno Mañana', activo: true,
-        descripcion: 'Horario estándar de mañana',
-        lunes:    { entrada: '06:00', salida: '14:00', trabaja: true },
-        martes:   { entrada: '06:00', salida: '14:00', trabaja: true },
-        miercoles:{ entrada: '06:00', salida: '14:00', trabaja: true },
-        jueves:   { entrada: '06:00', salida: '14:00', trabaja: true },
-        viernes:  { entrada: '06:00', salida: '14:00', trabaja: true },
-        sabado:   { entrada: '06:00', salida: '10:00', trabaja: true },
-        domingo:  { entrada: '08:00', salida: '12:00', trabaja: false }
-      },
-      {
-        id: 'turno-tarde', nombre: 'Turno Tarde', activo: true,
-        descripcion: 'Horario de tarde',
-        lunes:    { entrada: '14:00', salida: '22:00', trabaja: true },
-        martes:   { entrada: '14:00', salida: '22:00', trabaja: true },
-        miercoles:{ entrada: '14:00', salida: '22:00', trabaja: true },
-        jueves:   { entrada: '14:00', salida: '22:00', trabaja: true },
-        viernes:  { entrada: '14:00', salida: '22:00', trabaja: true },
-        sabado:   { entrada: '14:00', salida: '20:00', trabaja: true },
-        domingo:  { entrada: '08:00', salida: '12:00', trabaja: false }
-      },
-      {
-        id: 'turno-oficina', nombre: 'Turno Oficina', activo: true,
-        descripcion: 'Horario administrativo estándar',
-        lunes:    { entrada: '08:00', salida: '17:00', trabaja: true },
-        martes:   { entrada: '08:00', salida: '17:00', trabaja: true },
-        miercoles:{ entrada: '08:00', salida: '17:00', trabaja: true },
-        jueves:   { entrada: '08:00', salida: '17:00', trabaja: true },
-        viernes:  { entrada: '08:00', salida: '16:00', trabaja: true },
-        sabado:   { entrada: '08:00', salida: '12:00', trabaja: false },
-        domingo:  { entrada: '08:00', salida: '12:00', trabaja: false }
-      }
-    ];
+    const dia = DIAS[new Date().getDay()] as keyof Turno;
+    const h = turno[dia] as HorarioDia | undefined;
+    return h?.trabaja ? h : null;
   }
 }
