@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "AttendanceLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "UserId",    "order": "ASCENDING"  },
+        { "fieldPath": "Timestamp", "order": "ASCENDING"  }
+      ]
+    },
+    {
+      "collectionGroup": "AttendanceLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "UserId",    "order": "ASCENDING"  },
+        { "fieldPath": "Timestamp", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

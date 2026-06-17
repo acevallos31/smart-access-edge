@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SmartAccess.API.DTOs;
 using SmartAccess.API.Services;
 
 namespace SmartAccess.API.Controllers
@@ -109,25 +110,18 @@ namespace SmartAccess.API.Controllers
         /// POST /api/attendance/register - Registra un evento de asistencia
         /// </summary>
         [HttpPost("register")]
-        public async Task<IActionResult> RegisterAttendance([FromBody] Dictionary<string, object> payload)
+        public async Task<IActionResult> RegisterAttendance([FromBody] CheckInDto payload)
         {
             try
             {
-                if (payload == null || !payload.ContainsKey("UserId"))
+                if (payload == null || string.IsNullOrWhiteSpace(payload.UserId))
                 {
                     return BadRequest(new { message = "UserId es requerido" });
                 }
 
-                var userId = payload["UserId"]?.ToString();
-                if (string.IsNullOrWhiteSpace(userId))
-                {
-                    return BadRequest(new { message = "UserId inválido" });
-                }
+                var eventType = string.IsNullOrWhiteSpace(payload.EventType) ? "entrada" : payload.EventType;
 
-                // Obtener tipo de movimiento (entrada/salida)
-                var eventType = payload.ContainsKey("EventType") ? payload["EventType"]?.ToString() : "entrada";
-
-                var success = await _attendanceService.RegistrarAsistenciaAsync(userId, eventType);
+                var success = await _attendanceService.RegistrarAsistenciaAsync(payload.UserId, eventType);
                 if (!success)
                 {
                     return StatusCode(500, new { message = "Error registrando asistencia" });
@@ -152,24 +146,17 @@ namespace SmartAccess.API.Controllers
         /// POST /api/attendance/check - Verifica si el usuario ya registró hoy
         /// </summary>
         [HttpPost("check")]
-        public async Task<IActionResult> CheckAlreadyRegistered([FromBody] Dictionary<string, object> payload)
+        public async Task<IActionResult> CheckAlreadyRegistered([FromBody] CheckInDto payload)
         {
             try
             {
-                if (payload == null || !payload.ContainsKey("UserId"))
+                if (payload == null || string.IsNullOrWhiteSpace(payload.UserId))
                 {
                     return BadRequest(new { message = "UserId es requerido" });
                 }
 
-                var userId = payload["UserId"]?.ToString();
-                if (string.IsNullOrWhiteSpace(userId))
-                {
-                    return BadRequest(new { message = "UserId inválido" });
-                }
-
-                // Verificar si existe registro de hoy
-                var yaRegistro = await _attendanceService.YaRegistroHoyAsync(userId);
-                var ultimoRegistro = await _attendanceService.ObtenerUltimoRegistroAsync(userId);
+                var yaRegistro = await _attendanceService.YaRegistroHoyAsync(payload.UserId);
+                var ultimoRegistro = await _attendanceService.ObtenerUltimoRegistroAsync(payload.UserId);
 
                 return Ok(new
                 {

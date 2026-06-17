@@ -30,6 +30,7 @@ import { AttendanceStatistics } from '../../../models/models';
     <nav class="sidebar-nav">
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/employees'])"><mat-icon>group</mat-icon> Empleados</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/turnos'])"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/attendance'])"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item active"><mat-icon>bar_chart</mat-icon> Reportes</button>
     </nav>
