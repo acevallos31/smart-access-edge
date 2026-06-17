@@ -3,15 +3,14 @@
 // ============================================================
 
 // Roles del sistema
-// Roles con acceso ADMINISTRADOR: Jefe, Subjefe, Contador, Asistente del Jefe, Administrador
-// Roles sin acceso admin: Empleado
+// Roles de sistema:
+// - Administrador: acceso y modificación completa
+// - Supervisor: acceso de solo lectura al panel y reportes
+// - Usuario: vista de empleado
 export type RolSistema =
   | 'Administrador'
-  | 'Jefe'
-  | 'Subjefe'
-  | 'Contador'
-  | 'Asistente del Jefe'
-  | 'Empleado';
+  | 'Supervisor'
+  | 'Usuario';
 
 // Razón por la que un usuario está inactivo
 export type RazonInactividad = 'despedido' | 'retirado' | 'otro';
@@ -32,6 +31,8 @@ export interface Employee {
   nombre: string;
   departamento: string;
   cargo: string;
+  turnoId?: string;
+  turnoNombre?: string;
   rol?: RolSistema;           // rol en el sistema
   email?: string;             // correo del empleado
   password?: string;          // contraseña (solo visible para admins)
@@ -59,11 +60,18 @@ export interface AttendanceRecord {
   employeeId: string;
   departamento: string;
   department?: string;   // alias para compatibilidad (apunta a departamento)
+  turnoId?: string;
+  turnoNombre?: string;
   eventType: 'entrada' | 'salida';
   scheduledTime: string;
   recordedTime: string;
-  status: 'puntual' | 'tardanza' | 'ausente';
+  status: 'puntual' | 'tardanza' | 'ausente' | 'extra' | 'fuera de horario';
   captureUrl?: string;
+  lugarRegistro?: string;
+  ciudadRegistro?: string;
+  paisRegistro?: string;
+  latitudRegistro?: string;
+  longitudRegistro?: string;
   timestamp?: string;
 }
 
@@ -86,6 +94,10 @@ export interface AttendanceStatistics {
   porDepartamento:      DepartmentStat[];
   tendenciaSemanal:     TrendPoint[];
   tendencia?:           TrendPoint[];
+  periodoAplicado?:     'semana' | 'mes' | 'custom' | string;
+  desde?:               string;
+  hasta?:               string;
+  customRange?:         boolean;
 }
 
 export interface DepartmentStat {
@@ -109,10 +121,33 @@ export interface CheckInResult {
 // ── Helpers de roles ─────────────────────────────────────────
 /** Roles que tienen acceso de administración */
 export const ROLES_ADMIN: RolSistema[] = [
-  'Administrador', 'Jefe', 'Subjefe', 'Contador', 'Asistente del Jefe'
+  'Administrador',
+  'Supervisor'
 ];
+
+const LEGACY_ADMIN_ROLES = ['Jefe', 'Subjefe', 'Contador', 'Asistente del Jefe'];
+
+/** Normaliza roles históricos al nuevo esquema de 2 roles */
+export function normalizarRolSistema(rol: string): RolSistema {
+  const value = (rol ?? '').trim();
+
+  if (value === 'Administrador' || LEGACY_ADMIN_ROLES.includes(value)) {
+    return 'Administrador';
+  }
+
+  if (value === 'Supervisor') {
+    return 'Supervisor';
+  }
+
+  return 'Usuario';
+}
 
 /** Verifica si un rol tiene acceso de administración */
 export function esRolAdmin(rol: string): boolean {
-  return ROLES_ADMIN.includes(rol as RolSistema);
+  return ROLES_ADMIN.includes(normalizarRolSistema(rol));
+}
+
+/** Verifica si el rol puede modificar datos del panel administrativo */
+export function puedeGestionarPanelAdmin(rol: string): boolean {
+  return normalizarRolSistema(rol) === 'Administrador';
 }

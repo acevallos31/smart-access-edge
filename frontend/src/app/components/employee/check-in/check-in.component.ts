@@ -208,7 +208,7 @@ export class CheckInComponent implements OnInit, OnDestroy {
       const usaVerificacion = !!fotoBase64 && this.settingsService.tpuHabilitado;
       const modoEstricto = this.settingsService.strictFaceVerification;
       const registro$ = usaVerificacion
-        ? this.auth.registrarAsistenciaConVerificacion(tipo, fotoBase64, modoEstricto)
+        ? this.auth.registrarAsistenciaConVerificacion(tipo, fotoBase64, ubicacion, modoEstricto)
         : this.auth.registrarAsistencia(tipo, fotoBase64 ?? undefined, ubicacion);
 
       registro$.subscribe({
@@ -309,6 +309,25 @@ export class CheckInComponent implements OnInit, OnDestroy {
     if (!this.confirmacion) return '';
     const f = this.confirmacion.fecha;
     return `${this.DIAS[f.getDay()]} ${f.getDate()} de ${this.MESES[f.getMonth()]} de ${f.getFullYear()}`;
+  }
+
+  estadoClass(status?: string): string {
+    const value = (status ?? '').toLowerCase();
+    if (value === 'puntual') return 'status-puntual';
+    if (value === 'tardanza') return 'status-tardanza';
+    if (value === 'extra') return 'status-extra';
+    if (value === 'fuera de horario') return 'status-fuera-horario';
+    return 'status-ausente';
+  }
+
+  estadoLabel(status?: string): string {
+    const value = (status ?? '').toLowerCase();
+    if (value === 'puntual') return '✓ Puntual';
+    if (value === 'tardanza') return '⚠ Tardanza';
+    if (value === 'extra') return '⏱ Extra';
+    if (value === 'fuera de horario') return '🚫 Fuera de horario';
+    if (value === 'ausente') return '❌ Ausente';
+    return status ?? 'Sin estado';
   }
 
   volverAlInicio() {

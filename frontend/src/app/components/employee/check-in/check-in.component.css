@@ -263,3 +263,6 @@
 .status-badge  { border-radius: 999px; padding: .15rem .65rem; font-size: .8rem; }
 .status-puntual  { background: #dcfce7; color: #15803d; }
 .status-tardanza { background: #fef9c3; color: #854d0e; }
+.status-ausente { background: #fee2e2; color: #b91c1c; }
+.status-extra { background: #dbeafe; color: #1d4ed8; }
+.status-fuera-horario { background: #ffedd5; color: #c2410c; }

@@ -11,9 +11,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../services/auth.service';
 import { TurnoService, Turno, HorarioDia } from '../../../services/turno.service';
+import { CatalogService } from '../../../services/catalog.service';
 
 type ModalMode = 'none' | 'form' | 'delete';
 const DIAS = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'] as const;
@@ -29,7 +31,7 @@ const DIAS_LABEL: Record<DiaKey, string> = {
   imports: [
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatTooltipModule
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatTooltipModule
   ],
   template: `
 <div class="admin-layout">
@@ -41,7 +43,7 @@ const DIAS_LABEL: Record<DiaKey, string> = {
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/employees'])"><mat-icon>group</mat-icon> Empleados</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/users'])"><mat-icon>manage_accounts</mat-icon> Usuarios</button>
-      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Roles y Deptos</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Cargos y Departamentos</button>
       <button mat-button class="nav-item active"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/attendance'])"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/reports'])"><mat-icon>bar_chart</mat-icon> Reportes</button>
@@ -55,7 +57,7 @@ const DIAS_LABEL: Record<DiaKey, string> = {
     <div class="page-header">
       <div>
         <h1>Gestión de <span class="accent">Turnos</span></h1>
-        <p class="page-subtitle">Define horarios rotativos por día de la semana</p>
+        <p class="page-subtitle">Define horarios rotativos, almuerzo y departamento</p>
       </div>
       <button mat-raised-button color="primary" class="btn-nuevo" (click)="abrirCrear()">
         <mat-icon>add_circle</mat-icon> Nuevo Turno
@@ -77,6 +79,7 @@ const DIAS_LABEL: Record<DiaKey, string> = {
           <div class="turno-info">
             <h3>{{ t.nombre }}</h3>
             <p>{{ t.descripcion || 'Sin descripción' }}</p>
+            <p class="turno-depto">{{ t.departamento || 'Sin departamento' }}</p>
           </div>
           <span class="badge-estado" [ngClass]="t.activo ? 'badge-activo' : 'badge-inactivo'">
             {{ t.activo ? 'Activo' : 'Inactivo' }}
@@ -92,6 +95,9 @@ const DIAS_LABEL: Record<DiaKey, string> = {
               <span class="dia-hora">{{ t[dia]!.entrada }}</span>
               <span class="dia-sep">→</span>
               <span class="dia-hora">{{ t[dia]!.salida }}</span>
+              <span class="dia-lunch" *ngIf="t[dia]!.almuerzoInicio && t[dia]!.almuerzoFin">
+                A: {{ t[dia]!.almuerzoInicio }}-{{ t[dia]!.almuerzoFin }}
+              </span>
             </ng-container>
             <ng-template #libreBlock>
               <span class="dia-libre-txt">Libre</span>
@@ -103,6 +109,9 @@ const DIAS_LABEL: Record<DiaKey, string> = {
         <div class="turno-acciones">
           <button mat-icon-button color="primary" matTooltip="Editar" (click)="editar(t)">
             <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Copiar" (click)="copiarTurno(t)">
+            <mat-icon>content_copy</mat-icon>
           </button>
           <button *ngIf="t.activo" mat-icon-button color="warn" matTooltip="Desactivar" (click)="toggleActivo(t)">
             <mat-icon>pause_circle</mat-icon>
@@ -144,6 +153,12 @@ const DIAS_LABEL: Record<DiaKey, string> = {
           <mat-label>Descripción (opcional)</mat-label>
           <input matInput [(ngModel)]="form.descripcion" placeholder="Ej. Horario rotativo semana par">
         </mat-form-field>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Departamento</mat-label>
+          <mat-select [(ngModel)]="form.departamento" name="departamento" required>
+            <mat-option *ngFor="let departamento of departamentos" [value]="departamento">{{ departamento }}</mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
 
       <p class="dias-section-title">⏱ Configura el horario por día:</p>
@@ -160,6 +175,10 @@ const DIAS_LABEL: Record<DiaKey, string> = {
             <input type="time" class="time-input" [(ngModel)]="formDias[dia].entrada">
             <span class="dia-sep">→</span>
             <input type="time" class="time-input" [(ngModel)]="formDias[dia].salida">
+            <span class="dia-lunch-label">Almuerzo</span>
+            <input type="time" class="time-input" [(ngModel)]="formDias[dia].almuerzoInicio">
+            <span class="dia-sep">→</span>
+            <input type="time" class="time-input" [(ngModel)]="formDias[dia].almuerzoFin">
           </ng-container>
         </div>
       </div>
@@ -226,6 +245,7 @@ const DIAS_LABEL: Record<DiaKey, string> = {
     .turno-icon { font-size:2rem; }
     .turno-info h3 { margin:0 0 .2rem; font-size:1.05rem; color:#0f172a; }
     .turno-info p  { margin:0; font-size:.8rem; color:#64748b; }
+    .turno-depto { font-size:.75rem !important; color:#334155 !important; font-weight:600; }
     .badge-estado { font-size:.72rem; padding:.2rem .65rem; border-radius:999px; font-weight:600; margin-left:auto; white-space:nowrap; }
     .badge-activo   { background:#dcfce7; color:#15803d; }
     .badge-inactivo { background:#fee2e2; color:#dc2626; }
@@ -237,6 +257,7 @@ const DIAS_LABEL: Record<DiaKey, string> = {
     .dia-hora { display:block; color:#0f172a; font-weight:600; font-size:.68rem; }
     .dia-sep { display:block; color:#94a3b8; font-size:.6rem; }
     .dia-libre-txt { display:block; color:#94a3b8; font-size:.68rem; margin-top:.2rem; }
+    .dia-lunch { display:block; color:#475569; font-size:.62rem; margin-top:.15rem; }
     .turno-acciones { display:flex; justify-content:flex-end; gap:.25rem; border-top:1px solid #f1f5f9; padding-top:.75rem; }
     .btn-delete { color:#dc2626 !important; }
     .empty-state { text-align:center; padding:3rem; color:#94a3b8; }
@@ -267,6 +288,7 @@ const DIAS_LABEL: Record<DiaKey, string> = {
     .switch-slider:before { content:''; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
     .switch-wrap input:checked + .switch-slider:before { transform:translateX(18px); }
     .time-input { border:1px solid #e2e8f0; border-radius:.5rem; padding:.35rem .5rem; font-size:.85rem; width:80px; }
+    .dia-lunch-label { font-size:.72rem; color:#64748b; margin-left:.35rem; }
     .dia-sep { color:#94a3b8; font-size:.9rem; }
     .delete-warn { color:#dc2626; }
     /* Toast */
@@ -278,11 +300,12 @@ const DIAS_LABEL: Record<DiaKey, string> = {
 export class TurnoManagementComponent implements OnInit {
 
   turnos: Turno[] = [];
+  departamentos: string[] = [];
   modalMode: ModalMode = 'none';
   selectedTurno: Turno | null = null;
   editandoId: string | null = null;
 
-  form: Partial<Turno> = { nombre: '', descripcion: '' };
+  form: Partial<Turno> = { nombre: '', descripcion: '', departamento: '' };
   formDias: Record<DiaKey, HorarioDia> = this.defaultDias();
 
   readonly diasKeys = DIAS;
@@ -294,34 +317,38 @@ export class TurnoManagementComponent implements OnInit {
   constructor(
     public auth:   AuthService,
     private svc:   TurnoService,
+    private catalogService: CatalogService,
     public router: Router
   ) {}
 
   ngOnInit() { this.cargar(); }
 
-  cargar() { this.svc.getAll().subscribe(t => this.turnos = t); }
+  cargar() {
+    this.svc.getAll().subscribe(t => this.turnos = t);
+    this.catalogService.getDepartments().subscribe({ next: items => this.departamentos = items });
+  }
 
   get turnosActivos()   { return this.turnos.filter(t => t.activo).length; }
   get turnosInactivos() { return this.turnos.filter(t => !t.activo).length; }
 
   abrirCrear() {
     this.editandoId = null;
-    this.form       = { nombre: '', descripcion: '' };
+    this.form       = { nombre: '', descripcion: '', departamento: '' };
     this.formDias   = this.defaultDias();
     this.modalMode  = 'form';
   }
 
   editar(t: Turno) {
     this.editandoId = t.id ?? null;
-    this.form       = { nombre: t.nombre, descripcion: t.descripcion };
+    this.form       = { nombre: t.nombre, descripcion: t.descripcion, departamento: t.departamento ?? '' };
     this.formDias   = {
-      lunes:     t.lunes     ? { ...t.lunes }     : { entrada:'08:00', salida:'17:00', trabaja:true },
-      martes:    t.martes    ? { ...t.martes }    : { entrada:'08:00', salida:'17:00', trabaja:true },
-      miercoles: t.miercoles ? { ...t.miercoles } : { entrada:'08:00', salida:'17:00', trabaja:true },
-      jueves:    t.jueves    ? { ...t.jueves }    : { entrada:'08:00', salida:'17:00', trabaja:true },
-      viernes:   t.viernes   ? { ...t.viernes }   : { entrada:'08:00', salida:'17:00', trabaja:true },
-      sabado:    t.sabado    ? { ...t.sabado }    : { entrada:'08:00', salida:'12:00', trabaja:false },
-      domingo:   t.domingo   ? { ...t.domingo }   : { entrada:'08:00', salida:'12:00', trabaja:false }
+      lunes:     t.lunes     ? { ...t.lunes }     : { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      martes:    t.martes    ? { ...t.martes }    : { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      miercoles: t.miercoles ? { ...t.miercoles } : { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      jueves:    t.jueves    ? { ...t.jueves }    : { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      viernes:   t.viernes   ? { ...t.viernes }   : { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      sabado:    t.sabado    ? { ...t.sabado }    : { entrada:'08:00', salida:'12:00', almuerzoInicio:'', almuerzoFin:'', trabaja:false },
+      domingo:   t.domingo   ? { ...t.domingo }   : { entrada:'08:00', salida:'12:00', almuerzoInicio:'', almuerzoFin:'', trabaja:false }
     };
     this.modalMode = 'form';
   }
@@ -331,20 +358,38 @@ export class TurnoManagementComponent implements OnInit {
 
   guardarTurno() {
     if (!this.form.nombre) return;
+
+    const err = this.validarDias();
+    if (err) {
+      this.toast(err, 'err');
+      return;
+    }
+
     const payload: Omit<Turno,'id'> = {
       nombre:      this.form.nombre,
       descripcion: this.form.descripcion,
+      departamento: this.form.departamento,
       activo:      true,
       ...this.formDias
     };
 
     if (this.editandoId) {
-      this.svc.update(this.editandoId, payload).subscribe(() => {
-        this.cargar(); this.cerrarModal(); this.toast('Turno actualizado', 'ok');
+      this.svc.update(this.editandoId, payload).subscribe({
+        next: () => {
+          this.cargar(); this.cerrarModal(); this.toast('Turno actualizado', 'ok');
+        },
+        error: (err) => {
+          this.toast(err?.message ?? 'No se pudo actualizar el turno', 'err');
+        }
       });
     } else {
-      this.svc.create(payload).subscribe(() => {
-        this.cargar(); this.cerrarModal(); this.toast('Turno creado correctamente', 'ok');
+      this.svc.create(payload).subscribe({
+        next: () => {
+          this.cargar(); this.cerrarModal(); this.toast('Turno creado correctamente', 'ok');
+        },
+        error: (err) => {
+          this.toast(err?.message ?? 'No se pudo crear el turno', 'err');
+        }
       });
     }
   }
@@ -361,16 +406,64 @@ export class TurnoManagementComponent implements OnInit {
     });
   }
 
+  copiarTurno(t: Turno) {
+    const departamento = prompt('Departamento destino', t.departamento ?? '');
+    if (!departamento?.trim() || !t.id) return;
+
+    this.svc.copy(t.id, departamento.trim(), `${t.nombre} - Copia`).subscribe(() => {
+      this.cargar();
+      this.toast('Turno copiado', 'ok');
+    });
+  }
+
   private defaultDias(): Record<DiaKey, HorarioDia> {
     return {
-      lunes:     { entrada:'08:00', salida:'17:00', trabaja:true },
-      martes:    { entrada:'08:00', salida:'17:00', trabaja:true },
-      miercoles: { entrada:'08:00', salida:'17:00', trabaja:true },
-      jueves:    { entrada:'08:00', salida:'17:00', trabaja:true },
-      viernes:   { entrada:'08:00', salida:'17:00', trabaja:true },
-      sabado:    { entrada:'08:00', salida:'12:00', trabaja:false },
-      domingo:   { entrada:'08:00', salida:'12:00', trabaja:false }
+      lunes:     { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      martes:    { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      miercoles: { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      jueves:    { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      viernes:   { entrada:'08:00', salida:'17:00', almuerzoInicio:'', almuerzoFin:'', trabaja:true },
+      sabado:    { entrada:'08:00', salida:'12:00', almuerzoInicio:'', almuerzoFin:'', trabaja:false },
+      domingo:   { entrada:'08:00', salida:'12:00', almuerzoInicio:'', almuerzoFin:'', trabaja:false }
     };
+  }
+
+  private validarDias(): string | null {
+    for (const dia of this.diasKeys) {
+      const h = this.formDias[dia];
+      if (!h.trabaja) continue;
+
+      if (!this.validTime(h.entrada) || !this.validTime(h.salida)) {
+        return `${this.diasLabel[dia]}: hora de entrada/salida inválida.`;
+      }
+
+      if (h.entrada >= h.salida) {
+        return `${this.diasLabel[dia]}: la entrada debe ser menor que la salida.`;
+      }
+
+      const hasLunchStart = !!h.almuerzoInicio;
+      const hasLunchEnd = !!h.almuerzoFin;
+      if (hasLunchStart !== hasLunchEnd) {
+        return `${this.diasLabel[dia]}: define inicio y fin de almuerzo.`;
+      }
+
+      if (hasLunchStart && hasLunchEnd) {
+        if (!this.validTime(h.almuerzoInicio!) || !this.validTime(h.almuerzoFin!)) {
+          return `${this.diasLabel[dia]}: horario de almuerzo inválido.`;
+        }
+        if (h.almuerzoInicio! >= h.almuerzoFin!) {
+          return `${this.diasLabel[dia]}: inicio de almuerzo debe ser menor que fin.`;
+        }
+        if (h.almuerzoInicio! <= h.entrada || h.almuerzoFin! >= h.salida) {
+          return `${this.diasLabel[dia]}: almuerzo debe quedar dentro del turno.`;
+        }
+      }
+    }
+    return null;
+  }
+
+  private validTime(value: string): boolean {
+    return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
   }
 
   private toast(msg: string, type: 'ok' | 'err') {
