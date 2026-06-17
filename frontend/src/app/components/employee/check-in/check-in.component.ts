@@ -206,8 +206,9 @@ export class CheckInComponent implements OnInit, OnDestroy {
     // Obtener ubicación y registrar en paralelo
     this.locationSvc.obtenerUbicacion().subscribe(ubicacion => {
       const usaVerificacion = !!fotoBase64 && this.settingsService.tpuHabilitado;
+      const modoEstricto = this.settingsService.strictFaceVerification;
       const registro$ = usaVerificacion
-        ? this.auth.registrarAsistenciaConVerificacion(tipo, fotoBase64)
+        ? this.auth.registrarAsistenciaConVerificacion(tipo, fotoBase64, modoEstricto)
         : this.auth.registrarAsistencia(tipo, fotoBase64 ?? undefined, ubicacion);
 
       registro$.subscribe({
@@ -229,7 +230,7 @@ export class CheckInComponent implements OnInit, OnDestroy {
             });
           } else {
             // Fallback opcional: si falla la verificación, registrar sin TPU
-            if (usaVerificacion) {
+            if (usaVerificacion && !modoEstricto) {
               this.auth.registrarAsistencia(tipo, fotoBase64 ?? undefined, ubicacion).subscribe({
                 next: (fallbackRes) => {
                   if (fallbackRes.exito) {

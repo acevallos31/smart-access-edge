@@ -82,6 +82,19 @@ import { AuthService } from '../../../services/auth.service';
         </span>
       </div>
 
+      <!-- Modo estricto -->
+      <div class="setting-row">
+        <div class="setting-label">
+          <h3>Modo Estricto Facial</h3>
+          <p class="desc">Si está activado, no se permite fallback por falla de TPU: el rostro debe verificarse para registrar.</p>
+        </div>
+        <mat-slide-toggle
+          [checked]="settings.strictFaceVerification"
+          [disabled]="!settings.enableFaceVerificationTPU"
+          (change)="onToggleStrictFace($event.checked)">
+        </mat-slide-toggle>
+      </div>
+
       <!-- Photo Storage -->
       <div class="setting-row">
         <div class="setting-label">
@@ -121,6 +134,12 @@ import { AuthService } from '../../../services/auth.service';
       <div class="status-item">
         <span class="label">Servidor TPU:</span>
         <code>{{ settings.tpuServerUrl }}</code>
+      </div>
+      <div class="status-item">
+        <span class="label">Modo Estricto:</span>
+        <span [class]="'badge ' + (settings.strictFaceVerification ? 'enabled' : 'disabled')">
+          {{ settings.strictFaceVerification ? '✓ Activado' : '✗ Desactivado' }}
+        </span>
       </div>
       <div class="status-item">
         <span class="label">Almacenamiento de Fotos:</span>
@@ -270,8 +289,18 @@ export class SettingsComponent implements OnInit {
 
   onToggleFaceVerification(enabled: boolean): void {
     this.settingsService.toggleFaceVerificationTPU(enabled);
+    if (!enabled && this.settings.strictFaceVerification) {
+      this.settingsService.toggleStrictFaceVerification(false);
+    }
     this.mostrarNotificacion(
       enabled ? 'Verificación TPU habilitada' : 'Verificación TPU deshabilitada'
+    );
+  }
+
+  onToggleStrictFace(enabled: boolean): void {
+    this.settingsService.toggleStrictFaceVerification(enabled);
+    this.mostrarNotificacion(
+      enabled ? 'Modo estricto facial activado' : 'Modo estricto facial desactivado'
     );
   }
 

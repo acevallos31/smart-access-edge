@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 
 export interface AppSettings {
   enableFaceVerificationTPU: boolean;
+  strictFaceVerification: boolean;
   tpuServerUrl: string;
   photoStorageEnabled: boolean;
   theme: 'light' | 'dark';
@@ -14,6 +15,7 @@ export class SettingsService {
   private readonly STORAGE_KEY = 'sae_settings';
   private readonly DEFAULT_SETTINGS: AppSettings = {
     enableFaceVerificationTPU: true,
+    strictFaceVerification: false,
     tpuServerUrl: 'https://inference-api.nocpbx.com',
     photoStorageEnabled: true,
     theme: 'light'
@@ -53,6 +55,10 @@ export class SettingsService {
     this.actualizarConfiguracion({ enableFaceVerificationTPU: enabled });
   }
 
+  toggleStrictFaceVerification(enabled: boolean): void {
+    this.actualizarConfiguracion({ strictFaceVerification: enabled });
+  }
+
   /**
    * Cambia el servidor TPU
    */
@@ -79,6 +85,10 @@ export class SettingsService {
    */
   get urlServidorTPU(): string {
     return this.settingsSubject.getValue().tpuServerUrl;
+  }
+
+  get strictFaceVerification(): boolean {
+    return this.settingsSubject.getValue().strictFaceVerification;
   }
 
   private guardarConfiguracion(config: AppSettings): void {
