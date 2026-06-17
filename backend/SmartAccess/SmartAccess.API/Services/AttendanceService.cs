@@ -85,47 +85,25 @@ public class AttendanceService
             if (string.IsNullOrWhiteSpace(userId))
                 return new List<Dictionary<string, object>>();
 
-            try
-            {
-                // Intenta con índice compuesto (UserId ASC + Timestamp DESC)
-                var snapshot = await _firebaseService.GetCollection("AttendanceLogs")
-                    .WhereEqualTo("UserId", userId)
-                    .OrderByDescending("Timestamp")
-                    .Limit(100)
-                    .GetSnapshotAsync();
+            // Query simple por UserId, ordena en memoria (no requiere índice compuesto)
+            var snapshot = await _firebaseService.GetCollection("AttendanceLogs")
+                .WhereEqualTo("UserId", userId)
+                .Limit(100)
+                .GetSnapshotAsync();
 
-                var registros = new List<Dictionary<string, object>>();
-                foreach (var doc in snapshot.Documents)
+            return snapshot.Documents
+                .OrderByDescending(d =>
                 {
-                    var data = doc.ToDictionary();
-                    data["id"] = doc.Id;
-                    registros.Add(data);
-                }
-                return registros;
-            }
-            catch (Grpc.Core.RpcException rpcEx) when (rpcEx.StatusCode == Grpc.Core.StatusCode.FailedPrecondition)
-            {
-                _logger.LogWarning("Índice compuesto no disponible para ObtenerPorUsuario; usando fallback en memoria.");
-                var all = await _firebaseService.GetCollection("AttendanceLogs")
-                    .WhereEqualTo("UserId", userId)
-                    .Limit(200)
-                    .GetSnapshotAsync();
-
-                return all.Documents
-                    .OrderByDescending(d =>
-                    {
-                        d.TryGetValue<Timestamp>("Timestamp", out var ts);
-                        return ts.ToDateTime();
-                    })
-                    .Take(100)
-                    .Select(d =>
-                    {
-                        var data = d.ToDictionary();
-                        data["id"] = d.Id;
-                        return data;
-                    })
-                    .ToList();
-            }
+                    d.TryGetValue<Timestamp>("Timestamp", out var ts);
+                    return ts.ToDateTime();
+                })
+                .Select(d =>
+                {
+                    var data = d.ToDictionary();
+                    data["id"] = d.Id;
+                    return data;
+                })
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -169,39 +147,22 @@ public class AttendanceService
             if (string.IsNullOrWhiteSpace(userId))
                 return false;
 
-            var ahora = Timestamp.GetCurrentTimestamp();
-            var hoy = ahora.ToDateTime().Date;
-            var inicioDelDia = Timestamp.FromDateTime(hoy.ToUniversalTime());
-            var finDelDia = Timestamp.FromDateTime(hoy.AddDays(1).ToUniversalTime());
+            var hoy = DateTime.UtcNow.Date;
+            var inicioUtc = hoy;
+            var finUtc = hoy.AddDays(1);
 
-            try
+            // Query simple por UserId (no requiere índice compuesto), filtro en memoria
+            var snapshot = await _firebaseService.GetCollection("AttendanceLogs")
+                .WhereEqualTo("UserId", userId)
+                .Limit(200)
+                .GetSnapshotAsync();
+
+            return snapshot.Documents.Any(d =>
             {
-                // Intenta con índice compuesto (UserId ASC + Timestamp ASC)
-                var snapshot = await _firebaseService.GetCollection("AttendanceLogs")
-                    .WhereEqualTo("UserId", userId)
-                    .WhereGreaterThanOrEqualTo("Timestamp", inicioDelDia)
-                    .WhereLessThan("Timestamp", finDelDia)
-                    .Limit(1)
-                    .GetSnapshotAsync();
-                return snapshot.Count > 0;
-            }
-            catch (Grpc.Core.RpcException rpcEx) when (rpcEx.StatusCode == Grpc.Core.StatusCode.FailedPrecondition)
-            {
-                // Fallback: descarga solo por UserId y filtra en memoria mientras se crea el índice
-                _logger.LogWarning("Índice compuesto no disponible aún para YaRegistroHoy; usando fallback en memoria.");
-                var all = await _firebaseService.GetCollection("AttendanceLogs")
-                    .WhereEqualTo("UserId", userId)
-                    .Limit(200)
-                    .GetSnapshotAsync();
-                var inicioUtc = inicioDelDia.ToDateTime();
-                var finUtc = finDelDia.ToDateTime();
-                return all.Documents.Any(d =>
-                {
-                    if (!d.TryGetValue<Timestamp>("Timestamp", out var ts)) return false;
-                    var dt = ts.ToDateTime();
-                    return dt >= inicioUtc && dt < finUtc;
-                });
-            }
+                if (!d.TryGetValue<Timestamp>("Timestamp", out var ts)) return false;
+                var dt = ts.ToDateTime();
+                return dt >= inicioUtc && dt < finUtc;
+            });
         }
         catch (Exception ex)
         {
@@ -220,43 +181,25 @@ public class AttendanceService
             if (string.IsNullOrWhiteSpace(userId))
                 return null;
 
-            try
-            {
-                // Intenta con índice compuesto (UserId ASC + Timestamp DESC)
-                var snapshot = await _firebaseService.GetCollection("AttendanceLogs")
-                    .WhereEqualTo("UserId", userId)
-                    .OrderByDescending("Timestamp")
-                    .Limit(1)
-                    .GetSnapshotAsync();
+            // Query simple por UserId, ordena en memoria (no requiere índice compuesto)
+            var snapshot = await _firebaseService.GetCollection("AttendanceLogs")
+                .WhereEqualTo("UserId", userId)
+                .Limit(200)
+                .GetSnapshotAsync();
 
-                if (snapshot.Count == 0) return null;
-                var data = snapshot.Documents[0].ToDictionary();
-                data["id"] = snapshot.Documents[0].Id;
-                return data;
-            }
-            catch (Grpc.Core.RpcException rpcEx) when (rpcEx.StatusCode == Grpc.Core.StatusCode.FailedPrecondition)
-            {
-                _logger.LogWarning("Índice compuesto no disponible para ObtenerUltimoRegistro; usando fallback en memoria.");
-                var all = await _firebaseService.GetCollection("AttendanceLogs")
-                    .WhereEqualTo("UserId", userId)
-                    .Limit(200)
-                    .GetSnapshotAsync();
+            if (snapshot.Count == 0) return null;
 
-                if (all.Count == 0) return null;
+            var ultimo = snapshot.Documents
+                .OrderByDescending(d =>
+                {
+                    d.TryGetValue<Timestamp>("Timestamp", out var ts);
+                    return ts.ToDateTime();
+                })
+                .First();
 
-                var ultimo = all.Documents
-                    .OrderByDescending(d =>
-                    {
-                        d.TryGetValue<Timestamp>("Timestamp", out var ts);
-                        return ts.ToDateTime();
-                    })
-                    .FirstOrDefault();
-
-                if (ultimo == null) return null;
-                var data = ultimo.ToDictionary();
-                data["id"] = ultimo.Id;
-                return data;
-            }
+            var data = ultimo.ToDictionary();
+            data["id"] = ultimo.Id;
+            return data;
         }
         catch (Exception ex)
         {
