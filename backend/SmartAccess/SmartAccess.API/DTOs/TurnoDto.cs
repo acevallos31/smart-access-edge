@@ -4,6 +4,7 @@ namespace SmartAccess.API.DTOs
     {
         public string Nombre { get; set; } = string.Empty;
         public string? Descripcion { get; set; }
+        public string? Departamento { get; set; }
         public bool Activo { get; set; } = true;
 
         public HorarioDiaDto? Lunes { get; set; }
@@ -19,6 +20,8 @@ namespace SmartAccess.API.DTOs
     {
         public string Entrada { get; set; } = "08:00";
         public string Salida { get; set; } = "17:00";
+        public string? AlmuerzoInicio { get; set; }
+        public string? AlmuerzoFin { get; set; }
         public bool Trabaja { get; set; } = false;
     }
 }

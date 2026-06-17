@@ -84,14 +84,12 @@ export class FirebaseAuthService {
       .replace(/[._]/g, ' ')
       .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
-    let rolDemo = 'Empleado';
+    let rolDemo = 'Usuario';
     const emailLower = email.toLowerCase();
-    if (emailLower.includes('admin') || emailLower.includes('jefe')) {
+    if (emailLower.includes('admin')) {
       rolDemo = 'Administrador';
     } else if (emailLower.includes('supervisor')) {
       rolDemo = 'Supervisor';
-    } else if (emailLower.includes('gerente')) {
-      rolDemo = 'Gerente';
     }
 
     const usuarioDemo: UsuarioSesion = {

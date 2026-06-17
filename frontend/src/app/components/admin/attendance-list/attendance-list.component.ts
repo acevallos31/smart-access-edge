@@ -11,8 +11,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../services/auth.service';
-import { AttendanceService } from '../../../services/attendance.service';
-import { AttendanceRecord } from '../../../models/models';
+import { ReportService } from '../../../services/report.service';
+import { EmployeeService } from '../../../services/employee.service';
+import { TurnoService, Turno } from '../../../services/turno.service';
+import { CatalogService } from '../../../services/catalog.service';
+import { AttendanceRecord, Employee } from '../../../models/models';
 
 @Component({
   selector: 'app-attendance-list',
@@ -32,7 +35,7 @@ import { AttendanceRecord } from '../../../models/models';
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/employees'])"><mat-icon>group</mat-icon> Empleados</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/users'])"><mat-icon>manage_accounts</mat-icon> Usuarios</button>
-      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Roles y Deptos</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Cargos y Departamentos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/turnos'])"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item active"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/reports'])"><mat-icon>bar_chart</mat-icon> Reportes</button>
@@ -62,10 +65,47 @@ import { AttendanceRecord } from '../../../models/models';
 
     <!-- Filtros -->
     <mat-card class="filter-card">
+      <mat-form-field appearance="outline">
+        <mat-label>Periodo</mat-label>
+        <mat-select [(ngModel)]="periodo" (ngModelChange)="onPeriodoChange()">
+          <mat-option value="semana">Semana</mat-option>
+          <mat-option value="mes">Mes</mat-option>
+          <mat-option value="custom">Rango personalizado</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Desde</mat-label>
+        <input matInput type="date" [(ngModel)]="desde" (change)="cargar()" [disabled]="periodo !== 'custom'">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Hasta</mat-label>
+        <input matInput type="date" [(ngModel)]="hasta" (change)="cargar()" [disabled]="periodo !== 'custom'">
+      </mat-form-field>
       <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Buscar empleado o depto.</mat-label>
-        <input matInput [(ngModel)]="busqueda" (ngModelChange)="filtrar()" placeholder="Nombre, departamento...">
+        <mat-label>Buscar</mat-label>
+        <input matInput [(ngModel)]="busqueda" (ngModelChange)="filtrar()" placeholder="Nombre, departamento, turno...">
         <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Empleado</mat-label>
+        <mat-select [(ngModel)]="filtroEmpleado" (ngModelChange)="filtrar()">
+          <mat-option value="">Todos</mat-option>
+          <mat-option *ngFor="let e of empleados" [value]="e.id">{{ e.nombre }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Turno</mat-label>
+        <mat-select [(ngModel)]="filtroTurno" (ngModelChange)="filtrar()">
+          <mat-option value="">Todos</mat-option>
+          <mat-option *ngFor="let t of turnos" [value]="t.id">{{ t.nombre }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Departamento</mat-label>
+        <mat-select [(ngModel)]="filtroDepartamento" (ngModelChange)="filtrar()">
+          <mat-option value="">Todos</mat-option>
+          <mat-option *ngFor="let d of departamentos" [value]="d">{{ d }}</mat-option>
+        </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
@@ -74,6 +114,8 @@ import { AttendanceRecord } from '../../../models/models';
           <mat-option value="puntual">Puntual</mat-option>
           <mat-option value="tardanza">Tardanza</mat-option>
           <mat-option value="ausente">Ausente</mat-option>
+          <mat-option value="extra">Extra</mat-option>
+          <mat-option value="fuera de horario">Fuera de horario</mat-option>
         </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline">
@@ -98,6 +140,7 @@ import { AttendanceRecord } from '../../../models/models';
               <div>
                 <strong>{{ r.userName }}</strong>
                 <div class="emp-dept">{{ r.departamento }}</div>
+                <div class="emp-turno">{{ r.turnoNombre || 'Sin turno' }}</div>
               </div>
             </div>
           </td>
@@ -126,8 +169,13 @@ import { AttendanceRecord } from '../../../models/models';
         <ng-container matColumnDef="estado">
           <th mat-header-cell *matHeaderCellDef>Estado</th>
           <td mat-cell *matCellDef="let r">
-            <span class="badge" [ngClass]="'badge-' + r.status">{{ r.status }}</span>
+            <span class="badge" [ngClass]="estadoClass(r.status)">{{ r.status }}</span>
           </td>
+        </ng-container>
+
+        <ng-container matColumnDef="lugar">
+          <th mat-header-cell *matHeaderCellDef>Lugar</th>
+          <td mat-cell *matCellDef="let r">{{ r.lugarRegistro || '--' }}</td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="columnas"></tr>
@@ -165,11 +213,13 @@ import { AttendanceRecord } from '../../../models/models';
     .qlabel { font-size:.78rem; color:#64748b; }
     .filter-card { border-radius:1rem !important; padding:1.5rem; display:flex; gap:1rem; flex-wrap:wrap; align-items:center; }
     .search-field { flex:1; min-width:200px; }
+    .filter-card mat-form-field { min-width:170px; }
     .table-card { border-radius:1rem !important; overflow:hidden; }
     .full-table { width:100%; }
     .emp-cell { display:flex; align-items:center; gap:.75rem; }
     .emp-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#2e7d32,#4caf50); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
     .emp-dept { font-size:.8rem; color:#64748b; }
+    .emp-turno { font-size:.75rem; color:#334155; font-weight:600; }
     .tipo-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.82rem; }
     .tipo-entrada mat-icon { color:#22c55e; font-size:1.1rem; }
     .tipo-salida  mat-icon { color:#f59e0b; font-size:1.1rem; }
@@ -177,16 +227,27 @@ import { AttendanceRecord } from '../../../models/models';
     .badge-puntual  { background:#dcfce7; color:#15803d; }
     .badge-tardanza { background:#fef3c7; color:#b45309; }
     .badge-ausente  { background:#fee2e2; color:#b91c1c; }
+    .badge-extra { background:#dbeafe; color:#1d4ed8; }
+    .badge-fuera-horario { background:#ffedd5; color:#c2410c; }
     .empty-state { text-align:center; padding:3rem; color:#94a3b8; }
     .empty-state mat-icon { font-size:3rem; display:block; margin:0 auto .5rem; }
     th.mat-header-cell { background:#f8fafc; font-weight:600; color:#475569; }
   `]
 })
 export class AttendanceListComponent implements OnInit {
-  columnas = ['empleado', 'tipo', 'programada', 'registrada', 'estado'];
+  columnas = ['empleado', 'tipo', 'programada', 'registrada', 'estado', 'lugar'];
   registros: AttendanceRecord[] = [];
   registrosFiltrados: AttendanceRecord[] = [];
+  empleados: Employee[] = [];
+  turnos: Turno[] = [];
+  departamentos: string[] = [];
+  periodo: 'semana' | 'mes' | 'custom' = 'custom';
+  desde = '';
+  hasta = '';
   busqueda = '';
+  filtroEmpleado = '';
+  filtroTurno = '';
+  filtroDepartamento = '';
   filtroEstado = '';
   filtroTipo   = '';
 
@@ -197,34 +258,81 @@ export class AttendanceListComponent implements OnInit {
 
   constructor(
     public auth: AuthService,
-    private attendance: AttendanceService,
+    private reports: ReportService,
+    private employeesService: EmployeeService,
+    private turnosService: TurnoService,
+    private catalogs: CatalogService,
     public router: Router
   ) {}
 
-  ngOnInit() { this.cargar(); }
+  ngOnInit() {
+    const hoy = new Date();
+    const hace7 = new Date();
+    hace7.setDate(hace7.getDate() - 6);
+    this.desde = hace7.toISOString().slice(0, 10);
+    this.hasta = hoy.toISOString().slice(0, 10);
+    this.cargarOpciones();
+    this.cargar();
+  }
+
+  cargarOpciones() {
+    this.employeesService.getAll(true).subscribe(items => this.empleados = items);
+    this.turnosService.getAll(true).subscribe(items => this.turnos = items);
+    this.catalogs.getDepartments().subscribe(items => this.departamentos = items);
+  }
 
   cargar() {
-    this.attendance.getToday().subscribe(r => {
+    const periodo = this.periodo === 'custom' ? 'custom' : this.periodo;
+    const desde = this.periodo === 'custom' ? this.desde : undefined;
+    const hasta = this.periodo === 'custom' ? this.hasta : undefined;
+
+    this.reports.getRecords(periodo, desde, hasta).subscribe(r => {
       this.registros = r;
       this.filtrar();
     });
+  }
+
+  onPeriodoChange() {
+    if (this.periodo !== 'custom') {
+      this.cargar();
+      return;
+    }
+    if (this.desde && this.hasta) {
+      this.cargar();
+    }
   }
 
   filtrar() {
     this.registrosFiltrados = this.registros.filter(r => {
       const matchBusq = !this.busqueda ||
         r.userName.toLowerCase().includes(this.busqueda.toLowerCase()) ||
-        r.departamento.toLowerCase().includes(this.busqueda.toLowerCase());
+        r.departamento.toLowerCase().includes(this.busqueda.toLowerCase()) ||
+        (r.turnoNombre ?? '').toLowerCase().includes(this.busqueda.toLowerCase());
+      const matchEmpleado = !this.filtroEmpleado || r.userId === this.filtroEmpleado || r.employeeId === this.filtroEmpleado;
+      const matchTurno = !this.filtroTurno || r.turnoId === this.filtroTurno || r.turnoNombre === this.turnos.find(t => t.id === this.filtroTurno)?.nombre;
+      const matchDepartamento = !this.filtroDepartamento || r.departamento === this.filtroDepartamento;
       const matchEstado = !this.filtroEstado || r.status === this.filtroEstado;
       const matchTipo   = !this.filtroTipo   || r.eventType === this.filtroTipo;
-      return matchBusq && matchEstado && matchTipo;
+      return matchBusq && matchEmpleado && matchTurno && matchDepartamento && matchEstado && matchTipo;
     });
   }
 
   exportarCSV() {
-    const cabecera = ['Empleado', 'Departamento', 'Tipo', 'H.Programada', 'H.Registrada', 'Estado'].join(',');
+    const cabecera = ['Empleado', 'Departamento', 'Turno', 'Tipo', 'H.Programada', 'H.Registrada', 'Estado', 'Lugar', 'Ciudad', 'Pais', 'Fecha'].join(',');
     const filas = this.registrosFiltrados.map(r =>
-      [r.userName, r.departamento, r.eventType, r.scheduledTime, r.recordedTime, r.status].join(',')
+      [
+        r.userName,
+        r.departamento,
+        r.turnoNombre ?? '',
+        r.eventType,
+        r.scheduledTime,
+        r.recordedTime,
+        r.status,
+        r.lugarRegistro ?? '',
+        r.ciudadRegistro ?? '',
+        r.paisRegistro ?? '',
+        r.timestamp ?? ''
+      ].join(',')
     );
     const csv = [cabecera, ...filas].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -232,5 +340,14 @@ export class AttendanceListComponent implements OnInit {
     link.href = URL.createObjectURL(blob);
     link.download = `asistencia_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+  }
+
+  estadoClass(status: string): string {
+    const value = (status ?? '').toLowerCase();
+    if (value === 'puntual') return 'badge-puntual';
+    if (value === 'tardanza') return 'badge-tardanza';
+    if (value === 'extra') return 'badge-extra';
+    if (value === 'fuera de horario') return 'badge-fuera-horario';
+    return 'badge-ausente';
   }
 }

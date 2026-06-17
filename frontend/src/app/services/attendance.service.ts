@@ -40,8 +40,13 @@ export class AttendanceService {
           eventType: (r.eventType ?? r.EventType ?? r.tipo ?? r.Tipo ?? 'entrada') as 'entrada' | 'salida',
           scheduledTime: r.scheduledTime ?? r.ScheduledTime ?? '--:--',
           recordedTime: r.recordedTime ?? r.RecordedTime ?? '--:--',
-          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente',
+          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente' | 'extra' | 'fuera de horario',
           captureUrl: r.captureUrl ?? r.CaptureUrl,
+          lugarRegistro: r.lugarRegistro ?? r.LugarRegistro ?? '',
+          ciudadRegistro: r.ciudadRegistro ?? r.CiudadRegistro ?? '',
+          paisRegistro: r.paisRegistro ?? r.PaisRegistro ?? '',
+          latitudRegistro: r.latitudRegistro ?? r.LatitudRegistro ?? '',
+          longitudRegistro: r.longitudRegistro ?? r.LongitudRegistro ?? '',
           timestamp: r.timestamp ?? r.Timestamp
         } as AttendanceRecord))),
         catchError(this.handleErr('getToday'))
@@ -61,8 +66,13 @@ export class AttendanceService {
           eventType: (r.eventType ?? r.EventType ?? r.tipo ?? r.Tipo ?? 'entrada') as 'entrada' | 'salida',
           scheduledTime: r.scheduledTime ?? r.ScheduledTime ?? '--:--',
           recordedTime: r.recordedTime ?? r.RecordedTime ?? '--:--',
-          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente',
+          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente' | 'extra' | 'fuera de horario',
           captureUrl: r.captureUrl ?? r.CaptureUrl,
+          lugarRegistro: r.lugarRegistro ?? r.LugarRegistro ?? '',
+          ciudadRegistro: r.ciudadRegistro ?? r.CiudadRegistro ?? '',
+          paisRegistro: r.paisRegistro ?? r.PaisRegistro ?? '',
+          latitudRegistro: r.latitudRegistro ?? r.LatitudRegistro ?? '',
+          longitudRegistro: r.longitudRegistro ?? r.LongitudRegistro ?? '',
           timestamp: r.timestamp ?? r.Timestamp
         } as AttendanceRecord))),
         catchError(this.handleErr('getByUser'))

@@ -16,18 +16,36 @@ export const authGuard: CanActivateFn = () => {
   return false;
 };
 
-// Guard de administración: Jefe, Subjefe, Contador, Asistente del Jefe, Administrador
-export const adminGuard: CanActivateFn = () => {
+// Guard de panel admin (lectura): Administrador o Supervisor
+export const adminViewGuard: CanActivateFn = () => {
   const auth   = inject(AuthService);
   const router = inject(Router);
 
   if (auth.estaAutenticado && auth.esAdmin) return true;
 
   if (auth.estaAutenticado) {
-    // Tiene sesión pero sin rol admin → lo manda al dashboard de empleado
+    // Tiene sesión pero sin acceso al panel admin → lo manda al dashboard de empleado
     router.navigate(['/employee/dashboard']);
   } else {
     router.navigate(['/login']);
   }
   return false;
 };
+
+// Guard de modificación: solo Administrador
+export const adminManageGuard: CanActivateFn = () => {
+  const auth   = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.estaAutenticado && auth.puedeGestionarAdmin) return true;
+
+  if (auth.estaAutenticado) {
+    router.navigate(['/admin/reports']);
+  } else {
+    router.navigate(['/login']);
+  }
+
+  return false;
+};
+
+export const adminGuard = adminViewGuard;

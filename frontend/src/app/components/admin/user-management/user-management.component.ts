@@ -16,7 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { AuthService } from '../../../services/auth.service';
 import { EmployeeService } from '../../../services/employee.service';
-import { Employee, RazonInactividad, ROLES_ADMIN } from '../../../models/models';
+import { Employee, RazonInactividad, RolSistema, esRolAdmin, normalizarRolSistema } from '../../../models/models';
 
 type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactivate';
 
@@ -39,7 +39,7 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/employees'])"><mat-icon>group</mat-icon> Empleados</button>
       <button mat-button class="nav-item active"><mat-icon>manage_accounts</mat-icon> Usuarios</button>
-      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Roles y Deptos</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Cargos y Departamentos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/turnos'])"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/attendance'])"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/reports'])"><mat-icon>bar_chart</mat-icon> Reportes</button>
@@ -128,7 +128,7 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
         <ng-container matColumnDef="rol">
           <th mat-header-cell *matHeaderCellDef>Rol</th>
           <td mat-cell *matCellDef="let e">
-            <span class="badge-rol" [ngClass]="rolClass(e.rol)">{{ e.rol ?? 'Empleado' }}</span>
+            <span class="badge-rol" [ngClass]="rolClass(e.rol)">{{ normalizarRol(e.rol) }}</span>
           </td>
         </ng-container>
 
@@ -174,18 +174,18 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
             <button mat-icon-button color="primary" matTooltip="Ver detalles" (click)="verDetalles(e)">
               <mat-icon>visibility</mat-icon>
             </button>
-            <button mat-icon-button color="accent" matTooltip="Editar" (click)="editar(e)">
+            <button *ngIf="puedeGestionar" mat-icon-button color="accent" matTooltip="Editar" (click)="editar(e)">
               <mat-icon>edit</mat-icon>
             </button>
-            <button *ngIf="e.activo" mat-icon-button color="warn"
+            <button *ngIf="puedeGestionar && e.activo" mat-icon-button color="warn"
                     matTooltip="Dar de baja" (click)="abrirDesactivar(e)">
               <mat-icon>person_off</mat-icon>
             </button>
-            <button *ngIf="!e.activo" mat-icon-button color="primary"
+            <button *ngIf="puedeGestionar && !e.activo" mat-icon-button color="primary"
                     matTooltip="Reactivar" (click)="abrirReactivar(e)">
               <mat-icon>person</mat-icon>
             </button>
-            <button mat-icon-button class="btn-delete" matTooltip="Eliminar permanentemente" (click)="abrirEliminar(e)">
+            <button *ngIf="puedeGestionar" mat-icon-button class="btn-delete" matTooltip="Eliminar permanentemente" (click)="abrirEliminar(e)">
               <mat-icon>delete_forever</mat-icon>
             </button>
           </td>
@@ -212,7 +212,7 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
       <div class="modal-avatar" [ngClass]="avatarClass(selectedEmp.rol)">{{ selectedEmp.nombre.charAt(0) }}</div>
       <div>
         <h2>{{ selectedEmp.nombre }}</h2>
-        <span class="badge-rol" [ngClass]="rolClass(selectedEmp.rol)">{{ selectedEmp.rol ?? 'Empleado' }}</span>
+        <span class="badge-rol" [ngClass]="rolClass(selectedEmp.rol)">{{ normalizarRol(selectedEmp.rol) }}</span>
       </div>
       <button mat-icon-button class="modal-close" (click)="cerrarModal()"><mat-icon>close</mat-icon></button>
     </div>
@@ -273,7 +273,7 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
       </div>
     </div>
     <div class="modal-footer">
-      <button mat-raised-button color="primary" (click)="editar(selectedEmp)"><mat-icon>edit</mat-icon> Editar</button>
+      <button *ngIf="puedeGestionar" mat-raised-button color="primary" (click)="editar(selectedEmp)"><mat-icon>edit</mat-icon> Editar</button>
       <button mat-stroked-button (click)="cerrarModal()">Cerrar</button>
     </div>
   </div>
@@ -315,11 +315,8 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
           <mat-label>Rol en el sistema</mat-label>
           <mat-select [(ngModel)]="form.rol">
             <mat-option value="Administrador">🔴 Administrador</mat-option>
-            <mat-option value="Jefe">🔵 Jefe</mat-option>
-            <mat-option value="Subjefe">🟣 Subjefe</mat-option>
-            <mat-option value="Contador">🟤 Contador</mat-option>
-            <mat-option value="Asistente del Jefe">🟠 Asistente del Jefe</mat-option>
-            <mat-option value="Empleado">⚪ Empleado</mat-option>
+            <mat-option value="Supervisor">🟠 Supervisor</mat-option>
+            <mat-option value="Usuario">⚪ Usuario</mat-option>
           </mat-select>
         </mat-form-field>
 
@@ -348,7 +345,7 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
 
       <div *ngIf="form.rol && esAdmin(form.rol)" class="admin-notice">
         <mat-icon>admin_panel_settings</mat-icon>
-        <span>Este rol tendrá <strong>acceso al panel de administración</strong></span>
+        <span>{{ form.rol === 'Administrador' ? 'Este rol tendrá <strong>acceso y edición completa</strong>' : 'Este rol tendrá <strong>acceso de solo lectura</strong> al panel administrativo' }}</span>
       </div>
     </div>
     <div class="modal-footer">
@@ -498,6 +495,7 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
     .user-avatar { width:38px; height:38px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; flex-shrink:0; }
     .user-email { font-size:.78rem; color:#64748b; }
     .av-admin { background:linear-gradient(135deg,#7c3aed,#4f46e5); }
+    .av-super { background:linear-gradient(135deg,#f59e0b,#f97316); }
     .av-jefe  { background:linear-gradient(135deg,#1565c0,#1976d2); }
     .av-sub   { background:linear-gradient(135deg,#6d28d9,#8b5cf6); }
     .av-cont  { background:linear-gradient(135deg,#92400e,#b45309); }
@@ -506,6 +504,7 @@ type ModalMode = 'none' | 'view' | 'create' | 'deactivate' | 'delete' | 'reactiv
 
     .badge-rol { font-size:.72rem; padding:.2rem .6rem; border-radius:999px; font-weight:600; white-space:nowrap; }
     .rol-admin { background:#ede9fe; color:#5b21b6; }
+    .rol-super { background:#ffedd5; color:#c2410c; }
     .rol-jefe  { background:#dbeafe; color:#1e40af; }
     .rol-sub   { background:#f3e8ff; color:#7e22ce; }
     .rol-cont  { background:#fef3c7; color:#92400e; }
@@ -608,6 +607,10 @@ export class UserManagementComponent implements OnInit {
   // Visibilidad de contraseñas en tabla
   passwordVisible: Record<string, boolean> = {};
 
+  get puedeGestionar(): boolean {
+    return this.auth.puedeGestionarAdmin;
+  }
+
   // Toast
   toastMsg = '';
   toastType = 'toast-ok';
@@ -665,14 +668,14 @@ export class UserManagementComponent implements OnInit {
 
   abrirCrear() {
     this.editandoId = null;
-    this.form = { rol: 'Empleado', activo: true };
+    this.form = { rol: 'Usuario', activo: true };
     this.showFormPwd = false;
     this.modalMode = 'create';
   }
 
   editar(e: Employee) {
     this.editandoId = e.id ?? null;
-    this.form = { ...e };
+    this.form = { ...e, rol: this.normalizarRol(e.rol) };
     this.showFormPwd = false;
     this.modalMode = 'create';
   }
@@ -747,28 +750,26 @@ export class UserManagementComponent implements OnInit {
 
   // ── Helpers de estilos ────────────────────────────────────────
   esAdmin(rol: string): boolean {
-    return ['Administrador','Jefe','Subjefe','Contador','Asistente del Jefe'].includes(rol);
+    return esRolAdmin(rol);
+  }
+
+  normalizarRol(rol?: string): RolSistema {
+    return normalizarRolSistema(rol ?? 'Usuario');
   }
 
   avatarClass(rol?: string): string {
-    switch (rol) {
-      case 'Administrador':    return 'av-admin';
-      case 'Jefe':             return 'av-jefe';
-      case 'Subjefe':          return 'av-sub';
-      case 'Contador':         return 'av-cont';
-      case 'Asistente del Jefe': return 'av-asist';
-      default:                 return 'av-emp';
+    switch (this.normalizarRol(rol)) {
+      case 'Administrador': return 'av-admin';
+      case 'Supervisor': return 'av-super';
+      default: return 'av-emp';
     }
   }
 
   rolClass(rol?: string): string {
-    switch (rol) {
-      case 'Administrador':    return 'badge-rol rol-admin';
-      case 'Jefe':             return 'badge-rol rol-jefe';
-      case 'Subjefe':          return 'badge-rol rol-sub';
-      case 'Contador':         return 'badge-rol rol-cont';
-      case 'Asistente del Jefe': return 'badge-rol rol-asist';
-      default:                 return 'badge-rol rol-emp';
+    switch (this.normalizarRol(rol)) {
+      case 'Administrador': return 'badge-rol rol-admin';
+      case 'Supervisor': return 'badge-rol rol-super';
+      default: return 'badge-rol rol-emp';
     }
   }
 
