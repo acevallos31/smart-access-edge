@@ -40,7 +40,7 @@ export class TurnoService {
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   private headers(): HttpHeaders {
-    const token = this.auth.usuarioActual?.idToken ?? '';
+    const token = this.auth.usuarioActual?.token ?? this.auth.usuarioActual?.idToken ?? '';
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 

@@ -21,7 +21,7 @@ export const environment = {
   },
 
   // ── URL del backend ASP.NET Core ──
-  // Desarrollo local: http://localhost:5000
+  // Desarrollo local: http://localhost:5160
   // Producción: https://tu-dominio.com
-  apiUrl: 'http://localhost:5000/api'
+  apiUrl: 'http://localhost:5160/api'
 };

@@ -3,26 +3,36 @@
 // Guarda sesión en localStorage (persistente entre recargas)
 // ============================================================
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { UsuarioSesion, esRolAdmin } from '../models/models';
-import { StorageService } from './storage.service';
-import { AttendanceRecord } from '../models/models';
 
 export type { UsuarioSesion };
+
+interface LoginResponse {
+  token: string;
+}
+
+interface RegisterResponse {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
   private readonly STORAGE_KEY = 'sae_usuario';
+  private readonly AUTH_API = `${environment.apiUrl}/Auth`;
   private usuarioActual$ = new BehaviorSubject<UsuarioSesion | null>(null);
 
   constructor(
     private http: HttpClient,
-    private router: Router,
-    private storage: StorageService
+    private router: Router
   ) {
     this.restaurarSesion();
   }
@@ -36,50 +46,23 @@ export class AuthService {
 
   // ── LOGIN ────────────────────────────────────────────────────
   login(email: string, password: string): Observable<UsuarioSesion> {
-    // ══ MODO DEMO ═════════════════════════════════════════════
-    const nombre = email.split('@')[0]
-      .replace(/[._-]/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
-
-    const emailL = email.toLowerCase();
-    let rol: UsuarioSesion['rol'] = 'Empleado';
-    if      (emailL.includes('subjefe'))   rol = 'Subjefe';
-    else if (emailL.includes('jefe'))      rol = 'Jefe';
-    else if (emailL.includes('admin'))     rol = 'Administrador';
-    else if (emailL.includes('contador'))  rol = 'Contador';
-    else if (emailL.includes('asistente')) rol = 'Asistente del Jefe';
-
-    const demo: UsuarioSesion = {
-      uid: 'demo-' + email.replace(/[^a-z0-9]/gi, ''),
-      email, nombre, rol,
-      idToken: 'demo-token'
-    };
-    this.guardarSesion(demo);
-    return of(demo);
-    // ══ FIN MODO DEMO ═════════════════════════════════════════
-
-    /* ── MODO REAL (Firebase) ─────────────────────────────────
-    return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
-      switchMap(cred => from(cred.user.getIdToken())),
-      switchMap(idToken =>
-        this.http.post<any>(`${environment.apiUrl}/api/auth/login-verificar`, { idToken }).pipe(
-          map(perfil => ({ uid: perfil.userId, email, nombre: perfil.nombre, rol: perfil.rol, idToken } as UsuarioSesion)),
-          tap(u => this.guardarSesion(u))
-        )
-      ),
-      catchError(err => { throw this.traducirError(err.code); })
+    return this.http.post<LoginResponse>(`${this.AUTH_API}/login`, { email, password }).pipe(
+      map(res => this.construirSesionDesdeToken(res.token, email)),
+      tap(u => this.guardarSesion(u)),
+      catchError(err => throwError(() => this.extraerMensajeError(err, 'Credenciales inválidas. Intenta de nuevo.')))
     );
-    ──────────────────────────────────────────────────────────── */
   }
 
   // ── REGISTRO ─────────────────────────────────────────────────
   register(email: string, password: string, nombre: string): Observable<UsuarioSesion> {
-    const demo: UsuarioSesion = {
-      uid: 'demo-' + email.replace(/[^a-z0-9]/gi, ''),
-      email, nombre, rol: 'Empleado', idToken: 'demo-token'
-    };
-    this.guardarSesion(demo);
-    return of(demo);
+    return this.http.post<RegisterResponse>(`${this.AUTH_API}/register`, {
+      fullName: nombre,
+      email,
+      password
+    }).pipe(
+      switchMap(() => this.login(email, password)),
+      catchError(err => throwError(() => this.extraerMensajeError(err, 'No se pudo registrar la cuenta.')))
+    );
   }
 
   // ── RECUPERAR CONTRASEÑA ──────────────────────────────────────
@@ -104,35 +87,26 @@ export class AuthService {
     const usuario = this.usuarioActual$.getValue();
     if (!usuario) return of({ exito: false, mensaje: 'Sin sesión activa' });
 
-    // Determinar status (puntual / tardanza)
-    const ahora  = new Date();
-    const hhmm   = `${ahora.getHours().toString().padStart(2,'0')}:${ahora.getMinutes().toString().padStart(2,'0')}`;
-    const status: 'puntual' | 'tardanza' = this.calcularStatus(tipo, hhmm);
+    const endpoint = tipo === 'entrada' ? 'check-in' : 'check-out';
+    const token = usuario.token ?? usuario.idToken ?? '';
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
 
-    const registro: AttendanceRecord = {
-      id:            'rec-' + Date.now(),
-      userId:        usuario.uid,
-      userName:      usuario.nombre,
-      employeeId:    usuario.uid,
-      departamento:  'General',
-      eventType:     tipo,
-      scheduledTime: tipo === 'entrada' ? '08:00' : '17:00',
-      recordedTime:  hhmm,
-      status,
-      captureUrl:    fotoBase64 ?? undefined,
-      timestamp:     ahora.toISOString()
-    };
-
-    this.storage.agregarRegistro(registro);
-
-    return of({ exito: true, status, mensaje: `${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada` });
-  }
-
-  private calcularStatus(tipo: 'entrada' | 'salida', hhmm: string): 'puntual' | 'tardanza' {
-    const [h, m] = hhmm.split(':').map(Number);
-    const minutos = h * 60 + m;
-    if (tipo === 'entrada') return minutos <= 8 * 60 + 10 ? 'puntual' : 'tardanza';
-    return minutos <= 17 * 60 + 10 ? 'puntual' : 'tardanza';
+    return this.http.post<any>(
+      `${environment.apiUrl}/auth/${endpoint}`,
+      {
+        userId: usuario.uid,
+        captureUrl: fotoBase64,
+        ubicacion
+      },
+      { headers }
+    ).pipe(
+      map(resp => ({
+        exito: resp?.success ?? true,
+        status: resp?.status,
+        mensaje: resp?.message ?? `${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada`
+      })),
+      catchError(err => of({ exito: false, mensaje: this.extraerMensajeError(err, 'No se pudo registrar la asistencia.') }))
+    );
   }
 
   obtenerSesion(): UsuarioSesion | null { return this.usuarioActual$.getValue(); }
@@ -148,6 +122,54 @@ export class AuthService {
       const raw = localStorage.getItem(this.STORAGE_KEY);
       if (raw) this.usuarioActual$.next(JSON.parse(raw));
     } catch { localStorage.removeItem(this.STORAGE_KEY); }
+  }
+
+  private construirSesionDesdeToken(token: string, emailFallback: string): UsuarioSesion {
+    const payload = this.parseJwt(token);
+    const uid =
+      payload.sub ??
+      payload.nameid ??
+      payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
+      'sin-id';
+
+    const email =
+      payload.email ??
+      payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] ??
+      emailFallback;
+
+    const rol =
+      payload.role ??
+      payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ??
+      'Empleado';
+
+    const nombre =
+      payload.name ??
+      payload.unique_name ??
+      email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+    return {
+      uid,
+      email,
+      nombre,
+      rol,
+      token,
+      idToken: token
+    };
+  }
+
+  private parseJwt(token: string): any {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+      return JSON.parse(atob(padded));
+    } catch {
+      return {};
+    }
+  }
+
+  private extraerMensajeError(err: any, fallback: string): string {
+    return err?.error?.message ?? err?.message ?? fallback;
   }
 
   private traducirError(code: string): string {

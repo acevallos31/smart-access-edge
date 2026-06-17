@@ -22,7 +22,7 @@ export class AttendanceService {
   ) {}
 
   private headers(): HttpHeaders {
-    const token = this.auth.usuarioActual?.idToken ?? '';
+    const token = this.auth.usuarioActual?.token ?? this.auth.usuarioActual?.idToken ?? '';
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 
