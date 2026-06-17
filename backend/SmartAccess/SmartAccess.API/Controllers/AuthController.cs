@@ -121,5 +121,23 @@ namespace SmartAccess.API.Controllers
 
             return Ok(new { success = true, message = "Check-out registrado correctamente.", eventType = "salida" });
         }
+
+        [HttpGet("check-status/{userId}")]
+        [Authorize]
+        public async Task<IActionResult> GetCheckStatus(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return BadRequest(new { message = "UserId requerido." });
+            }
+
+            var user = await _authService.ObtenerUsuarioAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado." });
+            }
+
+            return Ok(new { checkedIn = user.CheckedIn });
+        }
     }
 }

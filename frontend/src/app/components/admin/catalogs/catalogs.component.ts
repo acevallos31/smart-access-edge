@@ -134,8 +134,14 @@ export class CatalogsComponent implements OnInit {
   }
 
   cargar(): void {
-    this.catalogs.getRoles().subscribe({ next: r => this.roles = r });
-    this.catalogs.getDepartments().subscribe({ next: d => this.departamentos = d });
+    this.catalogs.getRoles().subscribe({
+      next: r => this.roles = r,
+      error: (e) => this.snackBar.open(e?.message ?? 'No se pudieron cargar los roles', 'Cerrar', { duration: 3500 })
+    });
+    this.catalogs.getDepartments().subscribe({
+      next: d => this.departamentos = d,
+      error: (e) => this.snackBar.open(e?.message ?? 'No se pudieron cargar los departamentos', 'Cerrar', { duration: 3500 })
+    });
   }
 
   agregarRol(): void {
@@ -147,7 +153,8 @@ export class CatalogsComponent implements OnInit {
         this.nuevoRol = '';
         this.cargar();
         this.snackBar.open('Rol creado', 'Cerrar', { duration: 2500 });
-      }
+      },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error creando rol', 'Cerrar', { duration: 3500 })
     });
   }
 
@@ -160,7 +167,8 @@ export class CatalogsComponent implements OnInit {
         this.nuevoDepartamento = '';
         this.cargar();
         this.snackBar.open('Departamento creado', 'Cerrar', { duration: 2500 });
-      }
+      },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error creando departamento', 'Cerrar', { duration: 3500 })
     });
   }
 }
