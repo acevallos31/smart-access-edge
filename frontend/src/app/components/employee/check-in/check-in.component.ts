@@ -14,6 +14,7 @@ import { AuthService } from '../../../services/auth.service';
 import { AttendanceService } from '../../../services/attendance.service';
 import { FaceService } from '../../../services/face.service';
 import { LocationService, Ubicacion } from '../../../services/location.service';
+import { SettingsService } from '../../../services/settings.service';
 
 interface Confirmacion {
   tipo:      'entrada' | 'salida';
@@ -73,6 +74,7 @@ export class CheckInComponent implements OnInit, OnDestroy {
     private auth:     AuthService,
     private attendance: AttendanceService,
     private faceService: FaceService,
+    private settingsService: SettingsService,
     private locationSvc: LocationService,
     private router:   Router,
     private zone:     NgZone
@@ -203,7 +205,12 @@ export class CheckInComponent implements OnInit, OnDestroy {
 
     // Obtener ubicación y registrar en paralelo
     this.locationSvc.obtenerUbicacion().subscribe(ubicacion => {
-      this.auth.registrarAsistencia(tipo, fotoBase64 ?? undefined).subscribe({
+      const usaVerificacion = !!fotoBase64 && this.settingsService.tpuHabilitado;
+      const registro$ = usaVerificacion
+        ? this.auth.registrarAsistenciaConVerificacion(tipo, fotoBase64)
+        : this.auth.registrarAsistencia(tipo, fotoBase64 ?? undefined, ubicacion);
+
+      registro$.subscribe({
         next: (res) => {
           if (res.exito) {
             this.zone.run(() => {
@@ -221,6 +228,43 @@ export class CheckInComponent implements OnInit, OnDestroy {
               this.paso = 'confirmacion';
             });
           } else {
+            // Fallback opcional: si falla la verificación, registrar sin TPU
+            if (usaVerificacion) {
+              this.auth.registrarAsistencia(tipo, fotoBase64 ?? undefined, ubicacion).subscribe({
+                next: (fallbackRes) => {
+                  if (fallbackRes.exito) {
+                    this.zone.run(() => {
+                      this.yaRegistrado  = tipo === 'entrada';
+                      this.confirmacion  = {
+                        tipo,
+                        nombre: this.nombreUsuario,
+                        rol: this.rolUsuario,
+                        fecha: new Date(),
+                        fotoUrl: fotoBase64 ?? undefined,
+                        status: fallbackRes.status,
+                        ubicacion
+                      };
+                      this.dialogoTipo = null;
+                      this.paso = 'confirmacion';
+                    });
+                    return;
+                  }
+
+                  this.zone.run(() => {
+                    this.errorRegistro = res.mensaje ?? fallbackRes.mensaje ?? 'No se pudo registrar. Intenta de nuevo.';
+                    this.paso = 'dialogo';
+                  });
+                },
+                error: () => {
+                  this.zone.run(() => {
+                    this.errorRegistro = res.mensaje ?? 'No se pudo registrar. Intenta de nuevo.';
+                    this.paso = 'dialogo';
+                  });
+                }
+              });
+              return;
+            }
+
             this.zone.run(() => {
               this.errorRegistro = res.mensaje ?? 'No se pudo registrar. Intenta de nuevo.';
               this.paso = 'dialogo';

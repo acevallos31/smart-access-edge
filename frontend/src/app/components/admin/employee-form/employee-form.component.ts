@@ -11,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../services/auth.service';
 import { EmployeeService } from '../../../services/employee.service';
+import { CatalogService } from '../../../services/catalog.service';
 import { Employee } from '../../../models/models';
 
 @Component({
@@ -30,9 +31,12 @@ import { Employee } from '../../../models/models';
     <nav class="sidebar-nav">
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item active"><mat-icon>group</mat-icon> Empleados</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/users'])"><mat-icon>manage_accounts</mat-icon> Usuarios</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Roles y Deptos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/turnos'])"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/attendance'])"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/reports'])"><mat-icon>bar_chart</mat-icon> Reportes</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/settings'])"><mat-icon>settings</mat-icon> Configuración</button>
     </nav>
     <button mat-button class="nav-item logout" (click)="auth.logout()"><mat-icon>logout</mat-icon> Cerrar sesión</button>
   </aside>
@@ -67,6 +71,13 @@ import { Employee } from '../../../models/models';
               <mat-label>Cargo *</mat-label>
               <input matInput [(ngModel)]="empleado.cargo" name="cargo" required>
               <mat-icon matSuffix>work</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Rol *</mat-label>
+              <mat-select [(ngModel)]="empleado.rol" name="rol" required>
+                <mat-option *ngFor="let r of roles" [value]="r">{{ r }}</mat-option>
+              </mat-select>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -128,7 +139,7 @@ import { Employee } from '../../../models/models';
     .sidebar { width:260px; background:#0f172a; color:#f1f5f9; display:flex; flex-direction:column; padding:1.5rem 1rem; gap:.25rem; }
     .sidebar-brand { display:flex; align-items:center; gap:.5rem; color:#6ee7b7; font-weight:700; font-size:1rem; padding:.5rem .75rem 0; }
     .sidebar-role { color:#64748b; font-size:.78rem; padding:0 .75rem 1.5rem; }
-    .sidebar-nav { flex:1; display:flex; flex-direction:column; gap:.25rem; }
+    .sidebar-nav { flex:1; display:flex; flex-direction:column; gap:.25rem; overflow:auto; }
     .nav-item { width:100%; justify-content:flex-start !important; color:#94a3b8 !important; border-radius:.75rem; padding:.5rem .75rem; gap:.75rem; }
     .nav-item:hover, .nav-item.active { background:rgba(110,231,183,.1) !important; color:#6ee7b7 !important; }
     .logout { color:#f87171 !important; margin-top:auto; }
@@ -174,24 +185,41 @@ export class EmployeeFormComponent implements OnInit {
     'Recursos Humanos', 'Tecnología', 'Contabilidad',
     'Ventas', 'Marketing', 'Operaciones', 'Legal', 'Gerencia'
   ];
+  roles = ['Empleado', 'Administrador'];
 
   constructor(
     public auth: AuthService,
     private empService: EmployeeService,
+    private catalogs: CatalogService,
     private route: ActivatedRoute,
     public router: Router
   ) {}
 
   ngOnInit() {
+    this.catalogs.getDepartments().subscribe({
+      next: (items) => {
+        if (items.length) this.departamentos = items;
+      }
+    });
+
+    this.catalogs.getRoles().subscribe({
+      next: (items) => {
+        if (items.length) this.roles = items;
+      }
+    });
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.esEdicion = true;
       this.empService.getById(id).subscribe(e => {
         if (e) {
           this.empleado = { ...e };
+          this.empleado.rol = this.empleado.rol ?? 'Empleado';
           if (e.fotoUrl) this.fotoPreview = e.fotoUrl;
         }
       });
+    } else {
+      this.empleado.rol = 'Empleado';
     }
   }
 
@@ -209,7 +237,7 @@ export class EmployeeFormComponent implements OnInit {
 
   guardar() {
     this.errorMsg = '';
-    if (!this.empleado.nombre || !this.empleado.departamento || !this.empleado.cargo) {
+    if (!this.empleado.nombre || !this.empleado.departamento || !this.empleado.cargo || !this.empleado.rol) {
       this.errorMsg = 'Por favor completa todos los campos obligatorios.';
       return;
     }
