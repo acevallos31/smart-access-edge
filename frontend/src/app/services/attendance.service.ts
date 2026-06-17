@@ -28,8 +28,24 @@ export class AttendanceService {
   }
 
   getToday(): Observable<AttendanceRecord[]> {
-    return this.http.get<AttendanceRecord[]>(`${this.API}/today`, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('getToday')));
+    return this.http.get<any[]>(`${this.API}/today`, { headers: this.headers() })
+      .pipe(
+        map((rows: any[]) => (rows ?? []).map(r => ({
+          id: r.id,
+          userId: r.userId ?? r.UserId ?? '',
+          userName: r.userName ?? r.UserName ?? 'Empleado',
+          employeeId: r.employeeId ?? r.userId ?? r.UserId ?? '',
+          departamento: r.departamento ?? r.Departamento ?? r.department ?? r.Department ?? 'General',
+          department: r.department ?? r.Department ?? r.departamento ?? r.Departamento ?? 'General',
+          eventType: (r.eventType ?? r.EventType ?? r.tipo ?? r.Tipo ?? 'entrada') as 'entrada' | 'salida',
+          scheduledTime: r.scheduledTime ?? r.ScheduledTime ?? '--:--',
+          recordedTime: r.recordedTime ?? r.RecordedTime ?? '--:--',
+          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente',
+          captureUrl: r.captureUrl ?? r.CaptureUrl,
+          timestamp: r.timestamp ?? r.Timestamp
+        } as AttendanceRecord))),
+        catchError(this.handleErr('getToday'))
+      );
   }
 
   getByUser(userId: string, dias = 30): Observable<AttendanceRecord[]> {

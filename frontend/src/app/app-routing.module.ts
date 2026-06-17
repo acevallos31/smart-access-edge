@@ -13,9 +13,12 @@ const routes: Routes = [
   { path: 'admin/employees/new',     loadComponent: () => import('./components/admin/employee-form/employee-form.component').then(m => m.EmployeeFormComponent), canActivate: [adminGuard] },
   { path: 'admin/employees/edit/:id',loadComponent: () => import('./components/admin/employee-form/employee-form.component').then(m => m.EmployeeFormComponent), canActivate: [adminGuard] },
   { path: 'admin/users',      loadComponent: () => import('./components/admin/user-management/user-management.component').then(m => m.UserManagementComponent), canActivate: [adminGuard] },
+  { path: 'admin/catalogs',   loadComponent: () => import('./components/admin/catalogs/catalogs.component').then(m => m.CatalogsComponent), canActivate: [adminGuard] },
   { path: 'admin/turnos',     loadComponent: () => import('./components/admin/turno-management/turno-management.component').then(m => m.TurnoManagementComponent), canActivate: [adminGuard] },
   { path: 'admin/attendance', loadComponent: () => import('./components/admin/attendance-list/attendance-list.component').then(m => m.AttendanceListComponent), canActivate: [adminGuard] },
   { path: 'admin/reports',    loadComponent: () => import('./components/admin/reports/reports.component').then(m => m.ReportsComponent), canActivate: [adminGuard] },
+  { path: 'admin/settings',    loadComponent: () => import('./components/admin/settings/settings.component').then(m => m.SettingsComponent), canActivate: [adminGuard] },
+
 
   // ── Empleado ───────────────────────────────────────────────
   { path: 'employee/dashboard',    loadComponent: () => import('./components/employee/dashboard/employee-dashboard.component').then(m => m.EmployeeDashboardComponent), canActivate: [authGuard] },

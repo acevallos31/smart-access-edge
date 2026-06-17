@@ -108,6 +108,46 @@ export class AuthService {
     );
   }
 
+  /**
+   * Registra asistencia CON verificación facial vía TPU
+   * Requiere que el empleado tenga foto de referencia guardada
+   */
+  registrarAsistenciaConVerificacion(
+    tipo: 'entrada' | 'salida',
+    fotoBase64: string
+  ): Observable<{ exito: boolean; verified?: boolean; distance?: number; confidence?: number; status?: string; mensaje?: string }> {
+    const usuario = this.usuarioActual$.getValue();
+    if (!usuario) return of({ exito: false, mensaje: 'Sin sesión activa' });
+
+    const token = usuario.token ?? usuario.idToken ?? '';
+    if (!token) return of({ exito: false, mensaje: 'Token de sesión inválido' });
+
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+    return this.http.post<any>(
+      `${this.API}/attendance/verify-face`,
+      {
+        UserId: usuario.uid,
+        CapturePhotoBase64: fotoBase64,
+        EventType: tipo
+      },
+      { headers }
+    ).pipe(
+      map(resp => ({
+        exito: resp?.success ?? false,
+        verified: resp?.verified ?? false,
+        distance: resp?.distance,
+        confidence: resp?.confidence,
+        status: resp?.status,
+        mensaje: resp?.message ?? 'Verificación facial completada'
+      })),
+      catchError(err => {
+        const errorMsg = this.extraerMensajeError(err, 'Error en verificación facial');
+        return of({ exito: false, verified: false, mensaje: errorMsg });
+      })
+    );
+  }
+
   logout(): void {
     sessionStorage.removeItem(this.SESSION_KEY);
     this.usuarioActual$.next(null);
