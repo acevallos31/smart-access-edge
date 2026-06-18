@@ -17,7 +17,7 @@ import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
-import { UsuarioSesion, esRolAdmin } from '../models/models';
+import { UsuarioSesion, esRolAdmin, normalizarRolSistema, puedeGestionarPanelAdmin } from '../models/models';
 
 export type { UsuarioSesion };
 
@@ -47,6 +47,7 @@ export class AuthService {
   get usuarioActual(): UsuarioSesion | null { return this.usuarioActual$.getValue(); }
   get estaAutenticado(): boolean { return !!this.usuarioActual$.getValue(); }
   get esAdmin(): boolean { return esRolAdmin(this.usuarioActual?.rol ?? ''); }
+  get puedeGestionarAdmin(): boolean { return puedeGestionarPanelAdmin(this.usuarioActual?.rol ?? ''); }
   get sesionActual(): UsuarioSesion | null { return this.usuarioActual$.getValue(); }
   obtenerSesion(): UsuarioSesion | null { return this.usuarioActual$.getValue(); }
 
@@ -64,7 +65,7 @@ export class AuthService {
       password,
       fullName: nombre,
       name: nombre,
-      rol: 'Empleado'
+      rol: 'Usuario'
     }).pipe(
       catchError(err => throwError(() => new Error(this.extraerMensajeError(err, 'No se pudo crear la cuenta'))))
     );
@@ -115,6 +116,7 @@ export class AuthService {
   registrarAsistenciaConVerificacion(
     tipo: 'entrada' | 'salida',
     fotoBase64: string,
+    ubicacion?: { direccion?: string; ciudad?: string; pais?: string; lat?: number; lng?: number },
     strictMode = false
   ): Observable<{ exito: boolean; verified?: boolean; distance?: number; confidence?: number; status?: string; mensaje?: string }> {
     const usuario = this.usuarioActual$.getValue();
@@ -126,22 +128,21 @@ export class AuthService {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
 
     return this.http.post<any>(
-      `${this.API}/face/check-in`,
+      `${this.API}/attendance/verify-face`,
       {
         UserId: usuario.uid,
-        ImageBase64: fotoBase64,
+        CapturePhotoBase64: fotoBase64,
         EventType: tipo,
-        ContentType: 'image/jpeg',
-        Threshold: 0.75,
+        Ubicacion: ubicacion,
         StrictMode: strictMode
       },
       { headers }
     ).pipe(
       map(resp => ({
         exito: resp?.success ?? false,
-        verified: resp?.matched ?? true,
+        verified: resp?.verified ?? resp?.success ?? true,
         distance: resp?.distance,
-        confidence: resp?.score ?? resp?.confidence,
+        confidence: resp?.confidence,
         status: resp?.status,
         mensaje: resp?.message ?? 'Verificación facial completada'
       })),
@@ -189,7 +190,7 @@ export class AuthService {
       payload?.role ??
       payload?.rol ??
       payload?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ??
-      'Empleado';
+      'Usuario';
 
     const nombre =
       payload?.nombre ??
@@ -201,7 +202,7 @@ export class AuthService {
       uid,
       email,
       nombre,
-      rol,
+      rol: normalizarRolSistema(rol),
       token,
       idToken: token
     };

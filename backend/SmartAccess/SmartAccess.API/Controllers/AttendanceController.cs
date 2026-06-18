@@ -129,8 +129,13 @@ namespace SmartAccess.API.Controllers
 
                 var eventType = string.IsNullOrWhiteSpace(payload.EventType) ? "entrada" : payload.EventType;
 
-                var success = await _attendanceService.RegistrarAsistenciaAsync(payload.UserId, eventType);
-                if (!success)
+                var result = await _attendanceService.RegistrarAsistenciaAsync(
+                    payload.UserId,
+                    eventType,
+                    payload.Ubicacion,
+                    payload.CaptureUrl ?? payload.CaptureBase64
+                );
+                if (!result.Success)
                 {
                     return StatusCode(500, new { message = "Error registrando asistencia" });
                 }
@@ -139,8 +144,11 @@ namespace SmartAccess.API.Controllers
                 {
                     success = true,
                     message = "Asistencia registrada correctamente",
-                    eventType,
-                    timestamp = DateTime.UtcNow
+                    eventType = result.EventType,
+                    status = result.Status,
+                    recordedTime = result.RecordedTime,
+                    scheduledTime = result.ScheduledTime,
+                    timestamp = result.TimestampUtc
                 });
             }
             catch (Exception ex)
@@ -221,9 +229,11 @@ namespace SmartAccess.API.Controllers
                 // 4. Registrar asistencia
                 var registered = await _attendanceService.RegistrarAsistenciaAsync(
                     payload.UserId,
-                    payload.EventType ?? "entrada"
+                    payload.EventType ?? "entrada",
+                    payload.Ubicacion,
+                    captureUrl
                 );
-                if (!registered)
+                if (!registered.Success)
                     return StatusCode(500, new { message = "Error registrando asistencia después de verificación" });
 
                 _logger.LogInformation("Verificación facial exitosa y asistencia registrada para {UserId}", payload.UserId);
@@ -235,8 +245,11 @@ namespace SmartAccess.API.Controllers
                     verified = true,
                     distance,
                     confidence,
-                    eventType = payload.EventType ?? "entrada",
-                    timestamp = DateTime.UtcNow
+                    eventType = registered.EventType,
+                    status = registered.Status,
+                    recordedTime = registered.RecordedTime,
+                    scheduledTime = registered.ScheduledTime,
+                    timestamp = registered.TimestampUtc
                 });
             }
             catch (Exception ex)

@@ -64,8 +64,10 @@ export class LoginComponent {
   }
 
   private redirigir() {
-    if (this.auth.esAdmin) {
+    if (this.auth.puedeGestionarAdmin) {
       this.router.navigate(['/admin/dashboard']);
+    } else if (this.auth.esAdmin) {
+      this.router.navigate(['/admin/reports']);
     } else {
       this.router.navigate(['/employee/dashboard']);
     }

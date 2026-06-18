@@ -183,8 +183,8 @@
           <span class="detalle-icon">🏆</span>
           <div class="detalle-info">
             <span class="detalle-label">Estado</span>
-            <span class="detalle-valor status-badge" [ngClass]="'status-' + confirmacion.status">
-              {{ confirmacion.status === 'puntual' ? '✓ Puntual' : '⚠ Tardanza' }}
+            <span class="detalle-valor status-badge" [ngClass]="estadoClass(confirmacion.status)">
+              {{ estadoLabel(confirmacion.status) }}
             </span>
           </div>
         </div>

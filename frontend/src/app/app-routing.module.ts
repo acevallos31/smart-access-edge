@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { authGuard, adminGuard } from './guards/auth.guard';
+import { authGuard, adminViewGuard, adminManageGuard } from './guards/auth.guard';
 
 const routes: Routes = [
   { path: 'login',    loadComponent: () => import('./components/public/login/login.component').then(m => m.LoginComponent) },
@@ -8,16 +8,16 @@ const routes: Routes = [
   { path: 'landing',  loadComponent: () => import('./components/public/landing/landing.component').then(m => m.LandingComponent) },
 
   // ── Admin ──────────────────────────────────────────────────
-  { path: 'admin/dashboard',  loadComponent: () => import('./components/admin/dashboard/dashboard.component').then(m => m.AdminDashboardComponent), canActivate: [adminGuard] },
-  { path: 'admin/employees',  loadComponent: () => import('./components/admin/employee-management/employee-management.component').then(m => m.EmployeeManagementComponent), canActivate: [adminGuard] },
-  { path: 'admin/employees/new',     loadComponent: () => import('./components/admin/employee-form/employee-form.component').then(m => m.EmployeeFormComponent), canActivate: [adminGuard] },
-  { path: 'admin/employees/edit/:id',loadComponent: () => import('./components/admin/employee-form/employee-form.component').then(m => m.EmployeeFormComponent), canActivate: [adminGuard] },
-  { path: 'admin/users',      loadComponent: () => import('./components/admin/user-management/user-management.component').then(m => m.UserManagementComponent), canActivate: [adminGuard] },
-  { path: 'admin/catalogs',   loadComponent: () => import('./components/admin/catalogs/catalogs.component').then(m => m.CatalogsComponent), canActivate: [adminGuard] },
-  { path: 'admin/turnos',     loadComponent: () => import('./components/admin/turno-management/turno-management.component').then(m => m.TurnoManagementComponent), canActivate: [adminGuard] },
-  { path: 'admin/attendance', loadComponent: () => import('./components/admin/attendance-list/attendance-list.component').then(m => m.AttendanceListComponent), canActivate: [adminGuard] },
-  { path: 'admin/reports',    loadComponent: () => import('./components/admin/reports/reports.component').then(m => m.ReportsComponent), canActivate: [adminGuard] },
-  { path: 'admin/settings',    loadComponent: () => import('./components/admin/settings/settings.component').then(m => m.SettingsComponent), canActivate: [adminGuard] },
+  { path: 'admin/dashboard',  loadComponent: () => import('./components/admin/dashboard/dashboard.component').then(m => m.AdminDashboardComponent), canActivate: [adminViewGuard] },
+  { path: 'admin/employees',  loadComponent: () => import('./components/admin/employee-management/employee-management.component').then(m => m.EmployeeManagementComponent), canActivate: [adminManageGuard] },
+  { path: 'admin/employees/new',     loadComponent: () => import('./components/admin/employee-form/employee-form.component').then(m => m.EmployeeFormComponent), canActivate: [adminManageGuard] },
+  { path: 'admin/employees/edit/:id',loadComponent: () => import('./components/admin/employee-form/employee-form.component').then(m => m.EmployeeFormComponent), canActivate: [adminManageGuard] },
+  { path: 'admin/users',      loadComponent: () => import('./components/admin/user-management/user-management.component').then(m => m.UserManagementComponent), canActivate: [adminManageGuard] },
+  { path: 'admin/catalogs',   loadComponent: () => import('./components/admin/catalogs/catalogs.component').then(m => m.CatalogsComponent), canActivate: [adminManageGuard] },
+  { path: 'admin/turnos',     loadComponent: () => import('./components/admin/turno-management/turno-management.component').then(m => m.TurnoManagementComponent), canActivate: [adminManageGuard] },
+  { path: 'admin/attendance', loadComponent: () => import('./components/admin/attendance-list/attendance-list.component').then(m => m.AttendanceListComponent), canActivate: [adminManageGuard] },
+  { path: 'admin/reports',    loadComponent: () => import('./components/admin/reports/reports.component').then(m => m.ReportsComponent), canActivate: [adminViewGuard] },
+  { path: 'admin/settings',    loadComponent: () => import('./components/admin/settings/settings.component').then(m => m.SettingsComponent), canActivate: [adminManageGuard] },
 
 
   // ── Empleado ───────────────────────────────────────────────

@@ -20,11 +20,16 @@ namespace SmartAccess.API.Controllers
         }
 
         [HttpGet]
+<<<<<<< HEAD
         public async Task<IActionResult> GetAllEmployees([FromQuery] bool? soloActivos = null)
+=======
+        public async Task<IActionResult> GetAllEmployees([FromQuery] bool? soloActivos)
+>>>>>>> 06a354e1dc03d62cdbf01ac9e6186183b1734ba6
         {
-            var snapshot = await _firebaseService
-                .GetCollection("Employees")
-                .GetSnapshotAsync();
+            var query = _firebaseService.GetCollection("Employees");
+            QuerySnapshot snapshot = soloActivos == true
+                ? await query.WhereEqualTo("activo", true).GetSnapshotAsync()
+                : await query.GetSnapshotAsync();
 
             var employees = snapshot.Documents
                 .Where(doc =>
@@ -83,14 +88,33 @@ namespace SmartAccess.API.Controllers
         {
             var id = Guid.NewGuid().ToString();
 
+            var horarioEntrada = !string.IsNullOrWhiteSpace(employee.HorarioEntrada)
+                ? employee.HorarioEntrada
+                : "08:00";
+            var horarioSalida = !string.IsNullOrWhiteSpace(employee.HorarioSalida)
+                ? employee.HorarioSalida
+                : "17:00";
+
             var employeeData = new Dictionary<string, object>
             {
                 ["nombre"] = employee.Nombre,
                 ["departamento"] = employee.Departamento,
                 ["rol"] = string.IsNullOrWhiteSpace(employee.Rol) ? "Empleado" : employee.Rol,
                 ["cargo"] = employee.Cargo,
+                ["rol"] = string.IsNullOrWhiteSpace(employee.Rol) ? "Usuario" : employee.Rol,
+                ["email"] = employee.Email,
+                ["turnoId"] = employee.TurnoId,
+                ["turnoNombre"] = employee.TurnoNombre,
                 ["horarioAsignado"] = employee.HorarioAsignado,
+                ["horarioEntrada"] = horarioEntrada,
+                ["horarioSalida"] = horarioSalida,
+                ["horario"] = new Dictionary<string, object>
+                {
+                    ["entrada"] = horarioEntrada,
+                    ["salida"] = horarioSalida
+                },
                 ["fotoReferenciaUrl"] = employee.FotoReferenciaUrl,
+                ["fotoUrl"] = !string.IsNullOrWhiteSpace(employee.FotoUrl) ? employee.FotoUrl : employee.FotoReferenciaUrl,
                 ["activo"] = employee.Activo ?? true,
                 ["id"] = id,
                 ["createdAt"] = Timestamp.GetCurrentTimestamp()
@@ -184,6 +208,7 @@ namespace SmartAccess.API.Controllers
         }
 
         [HttpPatch("{id}/deactivate")]
+<<<<<<< HEAD
         public async Task<IActionResult> DeactivateEmployee(string id, [FromBody] DeactivateEmployeeRequest? request)
         {
             var docRef = _firebaseService
@@ -191,18 +216,30 @@ namespace SmartAccess.API.Controllers
                 .Document(id);
 
             var snapshot = await docRef.GetSnapshotAsync();
+=======
+        public async Task<IActionResult> DeactivateEmployee(string id, [FromBody] Dictionary<string, object>? body)
+        {
+            var docRef = _firebaseService.GetCollection("Employees").Document(id);
+            var snapshot = await docRef.GetSnapshotAsync();
+
+>>>>>>> 06a354e1dc03d62cdbf01ac9e6186183b1734ba6
             if (!snapshot.Exists)
             {
                 return NotFound(new { message = "Empleado no encontrado" });
             }
 
+<<<<<<< HEAD
             var update = new Dictionary<string, object>
+=======
+            var updates = new Dictionary<string, object>
+>>>>>>> 06a354e1dc03d62cdbf01ac9e6186183b1734ba6
             {
                 ["activo"] = false,
                 ["deactivatedAt"] = Timestamp.GetCurrentTimestamp(),
                 ["updatedAt"] = Timestamp.GetCurrentTimestamp()
             };
 
+<<<<<<< HEAD
             if (!string.IsNullOrWhiteSpace(request?.Razon))
             {
                 update["razonInactividad"] = request.Razon.Trim().ToLowerInvariant();
@@ -221,26 +258,54 @@ namespace SmartAccess.API.Controllers
                 id,
                 activo = false
             });
+=======
+            if (body != null)
+            {
+                if (body.TryGetValue("razon", out var razon) && razon != null)
+                {
+                    updates["razonInactividad"] = razon.ToString() ?? string.Empty;
+                }
+
+                if (body.TryGetValue("nota", out var nota) && nota != null)
+                {
+                    updates["notaInactividad"] = nota.ToString() ?? string.Empty;
+                }
+            }
+
+            await docRef.SetAsync(updates, SetOptions.MergeAll);
+            return Ok(new { message = "Empleado desactivado", id, activo = false });
+>>>>>>> 06a354e1dc03d62cdbf01ac9e6186183b1734ba6
         }
 
         [HttpPatch("{id}/activate")]
         public async Task<IActionResult> ActivateEmployee(string id)
         {
+<<<<<<< HEAD
             var docRef = _firebaseService
                 .GetCollection("Employees")
                 .Document(id);
 
             var snapshot = await docRef.GetSnapshotAsync();
+=======
+            var docRef = _firebaseService.GetCollection("Employees").Document(id);
+            var snapshot = await docRef.GetSnapshotAsync();
+
+>>>>>>> 06a354e1dc03d62cdbf01ac9e6186183b1734ba6
             if (!snapshot.Exists)
             {
                 return NotFound(new { message = "Empleado no encontrado" });
             }
 
+<<<<<<< HEAD
             var update = new Dictionary<string, object>
+=======
+            await docRef.SetAsync(new Dictionary<string, object>
+>>>>>>> 06a354e1dc03d62cdbf01ac9e6186183b1734ba6
             {
                 ["activo"] = true,
                 ["updatedAt"] = Timestamp.GetCurrentTimestamp(),
                 ["reactivatedAt"] = Timestamp.GetCurrentTimestamp(),
+<<<<<<< HEAD
                 ["razonInactividad"] = FieldValue.Delete,
                 ["notaInactividad"] = FieldValue.Delete,
                 ["deactivatedAt"] = FieldValue.Delete
@@ -254,6 +319,13 @@ namespace SmartAccess.API.Controllers
                 id,
                 activo = true
             });
+=======
+                ["razonInactividad"] = string.Empty,
+                ["notaInactividad"] = string.Empty
+            }, SetOptions.MergeAll);
+
+            return Ok(new { message = "Empleado activado", id, activo = true });
+>>>>>>> 06a354e1dc03d62cdbf01ac9e6186183b1734ba6
         }
 
         private static object? ConvertToFirestoreValue(object? value)

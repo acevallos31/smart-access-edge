@@ -40,8 +40,13 @@ export class AttendanceService {
           eventType: (r.eventType ?? r.EventType ?? r.tipo ?? r.Tipo ?? 'entrada') as 'entrada' | 'salida',
           scheduledTime: r.scheduledTime ?? r.ScheduledTime ?? '--:--',
           recordedTime: r.recordedTime ?? r.RecordedTime ?? '--:--',
-          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente',
+          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente' | 'extra' | 'fuera de horario',
           captureUrl: r.captureUrl ?? r.CaptureUrl,
+          lugarRegistro: r.lugarRegistro ?? r.LugarRegistro ?? '',
+          ciudadRegistro: r.ciudadRegistro ?? r.CiudadRegistro ?? '',
+          paisRegistro: r.paisRegistro ?? r.PaisRegistro ?? '',
+          latitudRegistro: r.latitudRegistro ?? r.LatitudRegistro ?? '',
+          longitudRegistro: r.longitudRegistro ?? r.LongitudRegistro ?? '',
           timestamp: r.timestamp ?? r.Timestamp
         } as AttendanceRecord))),
         catchError(this.handleErr('getToday'))
@@ -49,8 +54,29 @@ export class AttendanceService {
   }
 
   getByUser(userId: string, dias = 30): Observable<AttendanceRecord[]> {
-    return this.http.get<AttendanceRecord[]>(`${this.API}/user/${userId}?dias=${dias}`, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('getByUser')));
+    return this.http.get<any[]>(`${this.API}/user/${userId}?dias=${dias}`, { headers: this.headers() })
+      .pipe(
+        map((rows: any[]) => (rows ?? []).map(r => ({
+          id: r.id,
+          userId: r.userId ?? r.UserId ?? userId,
+          userName: r.userName ?? r.UserName ?? 'Empleado',
+          employeeId: r.employeeId ?? r.userId ?? r.UserId ?? userId,
+          departamento: r.departamento ?? r.Departamento ?? r.department ?? r.Department ?? 'General',
+          department: r.department ?? r.Department ?? r.departamento ?? r.Departamento ?? 'General',
+          eventType: (r.eventType ?? r.EventType ?? r.tipo ?? r.Tipo ?? 'entrada') as 'entrada' | 'salida',
+          scheduledTime: r.scheduledTime ?? r.ScheduledTime ?? '--:--',
+          recordedTime: r.recordedTime ?? r.RecordedTime ?? '--:--',
+          status: (r.status ?? r.Status ?? 'puntual') as 'puntual' | 'tardanza' | 'ausente' | 'extra' | 'fuera de horario',
+          captureUrl: r.captureUrl ?? r.CaptureUrl,
+          lugarRegistro: r.lugarRegistro ?? r.LugarRegistro ?? '',
+          ciudadRegistro: r.ciudadRegistro ?? r.CiudadRegistro ?? '',
+          paisRegistro: r.paisRegistro ?? r.PaisRegistro ?? '',
+          latitudRegistro: r.latitudRegistro ?? r.LatitudRegistro ?? '',
+          longitudRegistro: r.longitudRegistro ?? r.LongitudRegistro ?? '',
+          timestamp: r.timestamp ?? r.Timestamp
+        } as AttendanceRecord))),
+        catchError(this.handleErr('getByUser'))
+      );
   }
 
   getStatistics(periodo: 'semana' | 'mes' = 'semana'): Observable<AttendanceStatistics> {

@@ -14,6 +14,14 @@ namespace SmartAccess.API.Services
 {
     public class AuthService
     {
+        private static readonly HashSet<string> LegacyAdminRoles = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Jefe",
+            "Subjefe",
+            "Contador",
+            "Asistente del Jefe"
+        };
+
         private readonly FirebaseService _firebaseService;
         private readonly ILogger<AuthService> _logger;
         private readonly IConfiguration _configuration;
@@ -94,9 +102,7 @@ namespace SmartAccess.API.Services
                     nombre = registerDto.Email.Split('@')[0];
                 }
 
-                var rol = string.IsNullOrWhiteSpace(registerDto.Rol)
-                    ? "Empleado"
-                    : registerDto.Rol.Trim();
+                var rol = NormalizeSystemRole(registerDto.Rol);
 
                 var userRecord = await FirebaseAuth.DefaultInstance.CreateUserAsync(new UserRecordArgs
                 {
@@ -117,6 +123,24 @@ namespace SmartAccess.API.Services
                 };
 
                 await _firebaseService.GetCollection("Users").Document(userRecord.Uid).SetAsync(userData);
+
+                await _firebaseService.GetCollection("Employees").Document(userRecord.Uid).SetAsync(new Dictionary<string, object>
+                {
+                    ["id"] = userRecord.Uid,
+                    ["userId"] = userRecord.Uid,
+                    ["nombre"] = nombre,
+                    ["email"] = userRecord.Email ?? registerDto.Email.Trim(),
+                    ["cargo"] = "Pendiente",
+                    ["departamento"] = string.Empty,
+                    ["turnoId"] = string.Empty,
+                    ["turnoNombre"] = string.Empty,
+                    ["horarioEntrada"] = string.Empty,
+                    ["horarioSalida"] = string.Empty,
+                    ["activo"] = false,
+                    ["rol"] = "Usuario",
+                    ["createdAt"] = Timestamp.GetCurrentTimestamp(),
+                    ["createdBy"] = userRecord.Uid
+                });
 
                 return (new User
                 {
@@ -182,7 +206,7 @@ namespace SmartAccess.API.Services
 
                 var email = data.TryGetValue("Email", out var emailObj) ? emailObj?.ToString() ?? dto.Email.Trim() : dto.Email.Trim();
                 var nombre = data.TryGetValue("Nombre", out var nombreObj) ? nombreObj?.ToString() ?? string.Empty : string.Empty;
-                var rol = data.TryGetValue("Rol", out var rolObj) ? rolObj?.ToString() ?? "Empleado" : "Empleado";
+                var rol = NormalizeSystemRole(data.TryGetValue("Rol", out var rolObj) ? rolObj?.ToString() ?? "Usuario" : "Usuario");
 
                 var claims = new[]
                 {
@@ -241,13 +265,13 @@ namespace SmartAccess.API.Services
                 var currentData = snapshot.ToDictionary();
                 var currentEmail = currentData.TryGetValue("Email", out var emailObj) ? emailObj?.ToString() ?? string.Empty : string.Empty;
                 var currentNombre = currentData.TryGetValue("Nombre", out var nombreObj) ? nombreObj?.ToString() ?? string.Empty : string.Empty;
-                var currentRol = currentData.TryGetValue("Rol", out var rolObj) ? rolObj?.ToString() ?? "Empleado" : "Empleado";
+                var currentRol = NormalizeSystemRole(currentData.TryGetValue("Rol", out var rolObj) ? rolObj?.ToString() ?? "Usuario" : "Usuario");
 
                 var nextEmail = string.IsNullOrWhiteSpace(dto.Email) ? currentEmail : dto.Email.Trim();
                 var nextNombre = !string.IsNullOrWhiteSpace(dto.FullName)
                     ? dto.FullName.Trim()
                     : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : currentNombre);
-                var nextRol = string.IsNullOrWhiteSpace(dto.Rol) ? currentRol : dto.Rol.Trim();
+                var nextRol = string.IsNullOrWhiteSpace(dto.Rol) ? currentRol : NormalizeSystemRole(dto.Rol.Trim());
 
                 if (string.IsNullOrWhiteSpace(nextEmail) || string.IsNullOrWhiteSpace(nextNombre))
                 {
@@ -411,7 +435,7 @@ namespace SmartAccess.API.Services
         {
             var email = data.TryGetValue("Email", out var emailObj) ? emailObj?.ToString() ?? string.Empty : string.Empty;
             var nombre = data.TryGetValue("Nombre", out var nombreObj) ? nombreObj?.ToString() ?? string.Empty : string.Empty;
-            var rol = data.TryGetValue("Rol", out var rolObj) ? rolObj?.ToString() ?? "Empleado" : "Empleado";
+            var rol = NormalizeSystemRole(data.TryGetValue("Rol", out var rolObj) ? rolObj?.ToString() ?? "Usuario" : "Usuario");
             var checkedIn = data.TryGetValue("CheckedIn", out var checkedInObj) && checkedInObj is bool checkedInValue && checkedInValue;
 
             return new User
@@ -422,6 +446,17 @@ namespace SmartAccess.API.Services
                 Rol = rol,
                 CheckedIn = checkedIn
             };
+        }
+
+        private static string NormalizeSystemRole(string? rol)
+        {
+            var value = (rol ?? string.Empty).Trim();
+            if (string.Equals(value, "Administrador", StringComparison.OrdinalIgnoreCase) || LegacyAdminRoles.Contains(value))
+            {
+                return "Administrador";
+            }
+
+            return "Usuario";
         }
 
         public async Task<bool> ActualizarCheckInAsync(string uid, bool checkIn)

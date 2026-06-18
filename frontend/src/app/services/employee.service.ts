@@ -5,7 +5,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { Employee, RazonInactividad } from '../models/models';
 import { AuthService } from './auth.service';
@@ -27,25 +27,88 @@ export class EmployeeService {
       throwError(() => new Error(`[${op}] ${err?.error?.message ?? err?.message ?? 'Error de conexión'}`));
   }
 
+  private mapEmployee(raw: any): Employee {
+    const horarioEntrada = raw?.horarioEntrada ?? raw?.HorarioEntrada ?? raw?.horario?.entrada ?? raw?.Horario?.Entrada ?? '08:00';
+    const horarioSalida = raw?.horarioSalida ?? raw?.HorarioSalida ?? raw?.horario?.salida ?? raw?.Horario?.Salida ?? '17:00';
+
+    return {
+      id: raw?.id,
+      nombre: raw?.nombre ?? raw?.Nombre ?? '',
+      departamento: raw?.departamento ?? raw?.Departamento ?? 'General',
+      cargo: raw?.cargo ?? raw?.Cargo ?? raw?.rol ?? raw?.Rol ?? '',
+      turnoId: raw?.turnoId ?? raw?.TurnoId,
+      turnoNombre: raw?.turnoNombre ?? raw?.TurnoNombre,
+      rol: raw?.rol ?? raw?.Rol ?? raw?.cargo ?? raw?.Cargo ?? 'Empleado',
+      email: raw?.email ?? raw?.Email,
+      password: raw?.password ?? raw?.Password,
+      horarioEntrada,
+      horarioSalida,
+      horario: {
+        entrada: horarioEntrada,
+        salida: horarioSalida
+      },
+      fotoUrl: raw?.fotoUrl ?? raw?.FotoUrl ?? raw?.fotoReferenciaUrl ?? raw?.FotoReferenciaUrl,
+      activo: raw?.activo ?? raw?.Activo ?? true,
+      razonInactividad: raw?.razonInactividad ?? raw?.RazonInactividad,
+      notaInactividad: raw?.notaInactividad ?? raw?.NotaInactividad,
+      createdAt: raw?.createdAt ?? raw?.CreatedAt,
+      createdBy: raw?.createdBy ?? raw?.CreatedBy
+    };
+  }
+
+  private toApiPayload(emp: Partial<Employee>): any {
+    const horarioEntrada = emp.horarioEntrada ?? emp.horario?.entrada;
+    const horarioSalida = emp.horarioSalida ?? emp.horario?.salida;
+
+    return {
+      nombre: emp.nombre,
+      departamento: emp.departamento,
+      cargo: emp.cargo,
+      turnoId: emp.turnoId,
+      turnoNombre: emp.turnoNombre,
+      rol: emp.rol ?? emp.cargo,
+      email: emp.email,
+      password: emp.password,
+      horarioEntrada,
+      horarioSalida,
+      horarioAsignado: horarioEntrada && horarioSalida ? `${horarioEntrada}-${horarioSalida}` : '',
+      fotoUrl: emp.fotoUrl,
+      fotoReferenciaUrl: emp.fotoUrl,
+      activo: emp.activo
+    };
+  }
+
   getAll(soloActivos?: boolean): Observable<Employee[]> {
     const p = soloActivos !== undefined ? `?soloActivos=${soloActivos}` : '';
-    return this.http.get<Employee[]>(`${this.API}${p}`, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('getAll')));
+    return this.http.get<any[]>(`${this.API}${p}`, { headers: this.headers() })
+      .pipe(
+        map(rows => (rows ?? []).map(r => this.mapEmployee(r))),
+        catchError(this.handleErr('getAll'))
+      );
   }
 
   getById(id: string): Observable<Employee> {
-    return this.http.get<Employee>(`${this.API}/${id}`, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('getById')));
+    return this.http.get<any>(`${this.API}/${id}`, { headers: this.headers() })
+      .pipe(
+        map(raw => this.mapEmployee(raw)),
+        catchError(this.handleErr('getById'))
+      );
   }
 
   create(emp: Employee): Observable<Employee> {
-    return this.http.post<Employee>(this.API, emp, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('create')));
+    return this.http.post<any>(this.API, this.toApiPayload(emp), { headers: this.headers() })
+      .pipe(
+        map((raw: any) => this.mapEmployee(raw?.data ?? raw)),
+        catchError(this.handleErr('create'))
+      );
   }
 
   update(id: string, emp: Partial<Employee>): Observable<Employee> {
-    return this.http.put<Employee>(`${this.API}/${id}`, emp, { headers: this.headers() })
-      .pipe(catchError(this.handleErr('update')));
+    return this.http.put<any>(`${this.API}/${id}`, this.toApiPayload(emp), { headers: this.headers() })
+      .pipe(
+        map((raw: any) => this.mapEmployee(raw?.data ?? { ...emp, id })),
+        catchError(this.handleErr('update'))
+      );
   }
 
   deactivate(id: string, razon: RazonInactividad = 'despedido', nota?: string): Observable<any> {

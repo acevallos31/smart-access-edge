@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../services/auth.service';
 import { EmployeeService } from '../../../services/employee.service';
 import { Employee } from '../../../models/models';
@@ -21,7 +22,7 @@ import { Employee } from '../../../models/models';
     CommonModule, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatFormFieldModule, MatInputModule,
-    MatChipsModule, MatTooltipModule
+    MatChipsModule, MatTooltipModule, MatSnackBarModule
   ],
   template: `
 <div class="admin-layout">
@@ -32,7 +33,7 @@ import { Employee } from '../../../models/models';
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item active"><mat-icon>group</mat-icon> Empleados</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/users'])"><mat-icon>manage_accounts</mat-icon> Usuarios</button>
-      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Roles y Deptos</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Cargos y Departamentos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/turnos'])"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/attendance'])"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/reports'])"><mat-icon>bar_chart</mat-icon> Reportes</button>
@@ -109,6 +110,9 @@ import { Employee } from '../../../models/models';
                     [matTooltip]="e.activo ? 'Desactivar' : 'Activar'"
                     (click)="toggleEstado(e)">
               <mat-icon>{{ e.activo ? 'person_off' : 'person' }}</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" matTooltip="Eliminar" (click)="eliminar(e)">
+              <mat-icon>delete_forever</mat-icon>
             </button>
           </td>
         </ng-container>
@@ -191,6 +195,7 @@ export class EmployeeManagementComponent implements OnInit {
   constructor(
     public auth: AuthService,
     private empService: EmployeeService,
+    private snackBar: MatSnackBar,
     public router: Router
   ) {}
 
@@ -220,6 +225,17 @@ export class EmployeeManagementComponent implements OnInit {
   editar(e: Employee) { this.router.navigate(['/admin/employees/edit', e.id]); }
   toggleEstado(e: Employee) { this.empleadoAConfirmar = e; }
 
+  eliminar(e: Employee) {
+    if (!confirm(`¿Eliminar a ${e.nombre}? El registro quedará desactivado.`)) return;
+    this.empService.delete(e.id!).subscribe({
+      next: () => {
+        this.cargarEmpleados();
+        this.snackBar.open('Empleado eliminado', 'Cerrar', { duration: 2500 });
+      },
+      error: () => this.snackBar.open('No se pudo eliminar el empleado', 'Cerrar', { duration: 3500 })
+    });
+  }
+
   confirmarToggle() {
     if (!this.empleadoAConfirmar) return;
     const emp = this.empleadoAConfirmar;
@@ -227,8 +243,17 @@ export class EmployeeManagementComponent implements OnInit {
       ? this.empService.deactivate(emp.id!)
       : this.empService.activate(emp.id!);
     obs.subscribe(() => {
-      emp.activo = !emp.activo;
       this.empleadoAConfirmar = null;
+      this.cargarEmpleados();
+      this.snackBar.open(emp.activo ? 'Empleado desactivado' : 'Empleado activado', 'Cerrar', { duration: 2500 });
+    }, () => {
+      this.snackBar.open('No se pudo cambiar el estado del empleado', 'Cerrar', { duration: 3500 });
+    });
+  }
+
+  private cargarEmpleados() {
+    this.empService.getAll().subscribe(e => {
+      this.empleados = e;
       this.filtrar();
     });
   }

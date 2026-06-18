@@ -11,6 +11,8 @@ import { AuthService } from './auth.service';
 export interface HorarioDia {
   entrada: string;
   salida:  string;
+  almuerzoInicio?: string;
+  almuerzoFin?: string;
   trabaja: boolean;
 }
 
@@ -18,6 +20,7 @@ export interface Turno {
   id?:          string;
   nombre:       string;
   descripcion?: string;
+  departamento?: string;
   activo:       boolean;
   lunes?:     HorarioDia;
   martes?:    HorarioDia;
@@ -83,6 +86,11 @@ export class TurnoService {
   delete(id: string): Observable<any> {
     return this.http.delete<any>(`${this.API}/${id}`, { headers: this.headers() })
       .pipe(catchError(this.handleErr('delete')));
+  }
+
+  copy(id: string, departamento: string, nombre?: string): Observable<Turno> {
+    return this.http.post<Turno>(`${this.API}/${id}/copy`, { departamento, nombre }, { headers: this.headers() })
+      .pipe(catchError(this.handleErr('copy')));
   }
 
   getHorarioHoy(turno: Turno): HorarioDia | null {

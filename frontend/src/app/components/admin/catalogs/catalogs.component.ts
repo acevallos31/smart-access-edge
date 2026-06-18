@@ -10,7 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { AuthService } from '../../../services/auth.service';
-import { CatalogService } from '../../../services/catalog.service';
+import { CatalogService, CatalogItem } from '../../../services/catalog.service';
 
 @Component({
   selector: 'app-catalogs',
@@ -34,7 +34,7 @@ import { CatalogService } from '../../../services/catalog.service';
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/employees'])"><mat-icon>group</mat-icon> Empleados</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/users'])"><mat-icon>manage_accounts</mat-icon> Usuarios</button>
-      <button mat-button class="nav-item active"><mat-icon>badge</mat-icon> Roles y Deptos</button>
+      <button mat-button class="nav-item active"><mat-icon>badge</mat-icon> Cargos y Departamentos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/turnos'])"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/attendance'])"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/reports'])"><mat-icon>bar_chart</mat-icon> Reportes</button>
@@ -45,25 +45,40 @@ import { CatalogService } from '../../../services/catalog.service';
 
   <main class="main-content">
     <div class="page-header">
-      <h1>Catálogos de <span class="accent">Roles y Departamentos</span></h1>
+      <h1>Catálogos de <span class="accent">Cargos y Departamentos</span></h1>
       <button mat-stroked-button (click)="cargar()"><mat-icon>refresh</mat-icon> Actualizar</button>
     </div>
 
     <div class="catalog-grid">
       <mat-card class="catalog-card">
         <mat-card-header>
-          <mat-card-title><mat-icon>badge</mat-icon> Roles</mat-card-title>
+          <mat-card-title><mat-icon>work</mat-icon> Cargos</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <div class="add-row">
             <mat-form-field appearance="outline" class="full">
-              <mat-label>Nuevo rol</mat-label>
-              <input matInput [(ngModel)]="nuevoRol" placeholder="Ej: Supervisor">
+              <mat-label>Nuevo cargo</mat-label>
+              <input matInput [(ngModel)]="nuevoCargo" placeholder="Ej: Supervisor">
             </mat-form-field>
-            <button mat-raised-button color="primary" (click)="agregarRol()" [disabled]="!nuevoRol.trim()">Agregar</button>
+            <button mat-raised-button color="primary" (click)="agregarCargo()" [disabled]="!nuevoCargo.trim()">Agregar</button>
           </div>
-          <div class="chips">
-            <span class="chip" *ngFor="let r of roles">{{ r }}</span>
+          <div class="catalog-list">
+            <div class="catalog-item" *ngFor="let r of cargos">
+              <ng-container *ngIf="editingCargoId === r.id; else cargoView">
+                <input class="inline-input" [(ngModel)]="editingCargoName" [ngModelOptions]="{standalone:true}">
+                <div class="item-actions">
+                  <button mat-icon-button color="primary" (click)="guardarCargoEdicion()"><mat-icon>save</mat-icon></button>
+                  <button mat-icon-button (click)="cancelarEdicion()"><mat-icon>close</mat-icon></button>
+                </div>
+              </ng-container>
+              <ng-template #cargoView>
+                <span class="chip">{{ r.name }}</span>
+                <div class="item-actions">
+                  <button mat-icon-button (click)="editarCargo(r)"><mat-icon>edit</mat-icon></button>
+                  <button mat-icon-button color="warn" (click)="eliminarCargo(r)"><mat-icon>delete</mat-icon></button>
+                </div>
+              </ng-template>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
@@ -80,8 +95,23 @@ import { CatalogService } from '../../../services/catalog.service';
             </mat-form-field>
             <button mat-raised-button color="primary" (click)="agregarDepartamento()" [disabled]="!nuevoDepartamento.trim()">Agregar</button>
           </div>
-          <div class="chips">
-            <span class="chip" *ngFor="let d of departamentos">{{ d }}</span>
+          <div class="catalog-list">
+            <div class="catalog-item" *ngFor="let d of departamentos">
+              <ng-container *ngIf="editingDepartamentoId === d.id; else deptView">
+                <input class="inline-input" [(ngModel)]="editingDepartamentoName" [ngModelOptions]="{standalone:true}">
+                <div class="item-actions">
+                  <button mat-icon-button color="primary" (click)="guardarDepartamentoEdicion()"><mat-icon>save</mat-icon></button>
+                  <button mat-icon-button (click)="cancelarEdicion()"><mat-icon>close</mat-icon></button>
+                </div>
+              </ng-container>
+              <ng-template #deptView>
+                <span class="chip">{{ d.name }}</span>
+                <div class="item-actions">
+                  <button mat-icon-button (click)="editarDepartamento(d)"><mat-icon>edit</mat-icon></button>
+                  <button mat-icon-button color="warn" (click)="eliminarDepartamento(d)"><mat-icon>delete</mat-icon></button>
+                </div>
+              </ng-template>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
@@ -108,8 +138,11 @@ import { CatalogService } from '../../../services/catalog.service';
     .catalog-card { border-radius:1rem !important; }
     .add-row { display:flex; gap:.75rem; align-items:center; }
     .full { flex:1; }
-    .chips { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem; }
+    .catalog-list { display:flex; flex-direction:column; gap:.6rem; margin-top:1rem; }
+    .catalog-item { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
     .chip { background:#e2e8f0; color:#334155; border-radius:999px; padding:.3rem .7rem; font-size:.82rem; }
+    .inline-input { flex:1; border:1px solid #cbd5e1; border-radius:.6rem; padding:.45rem .7rem; }
+    .item-actions { display:flex; gap:.25rem; flex-shrink:0; }
 
     @media (max-width: 920px) {
       .catalog-grid { grid-template-columns:1fr; }
@@ -117,10 +150,14 @@ import { CatalogService } from '../../../services/catalog.service';
   `]
 })
 export class CatalogsComponent implements OnInit {
-  roles: string[] = [];
-  departamentos: string[] = [];
-  nuevoRol = '';
+  cargos: CatalogItem[] = [];
+  departamentos: CatalogItem[] = [];
+  nuevoCargo = '';
   nuevoDepartamento = '';
+  editingCargoId = '';
+  editingCargoName = '';
+  editingDepartamentoId = '';
+  editingDepartamentoName = '';
 
   constructor(
     public auth: AuthService,
@@ -134,20 +171,27 @@ export class CatalogsComponent implements OnInit {
   }
 
   cargar(): void {
-    this.catalogs.getRoles().subscribe({ next: r => this.roles = r });
-    this.catalogs.getDepartments().subscribe({ next: d => this.departamentos = d });
+    this.catalogs.getRoleItems().subscribe({
+      next: r => this.cargos = r,
+      error: (e) => this.snackBar.open(e?.message ?? 'No se pudieron cargar los cargos', 'Cerrar', { duration: 3500 })
+    });
+    this.catalogs.getDepartmentItems().subscribe({
+      next: d => this.departamentos = d,
+      error: (e) => this.snackBar.open(e?.message ?? 'No se pudieron cargar los departamentos', 'Cerrar', { duration: 3500 })
+    });
   }
 
-  agregarRol(): void {
-    const name = this.nuevoRol.trim();
+  agregarCargo(): void {
+    const name = this.nuevoCargo.trim();
     if (!name) return;
 
     this.catalogs.addRole(name).subscribe({
       next: () => {
-        this.nuevoRol = '';
+        this.nuevoCargo = '';
         this.cargar();
-        this.snackBar.open('Rol creado', 'Cerrar', { duration: 2500 });
-      }
+        this.snackBar.open('Cargo creado', 'Cerrar', { duration: 2500 });
+      },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error creando cargo', 'Cerrar', { duration: 3500 })
     });
   }
 
@@ -160,7 +204,67 @@ export class CatalogsComponent implements OnInit {
         this.nuevoDepartamento = '';
         this.cargar();
         this.snackBar.open('Departamento creado', 'Cerrar', { duration: 2500 });
-      }
+      },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error creando departamento', 'Cerrar', { duration: 3500 })
     });
+  }
+
+  editarCargo(item: CatalogItem): void {
+    this.cancelarEdicion();
+    this.editingCargoId = item.id;
+    this.editingCargoName = item.name;
+  }
+
+  guardarCargoEdicion(): void {
+    if (!this.editingCargoId || !this.editingCargoName.trim()) return;
+    this.catalogs.updateRole(this.editingCargoId, this.editingCargoName.trim()).subscribe({
+      next: () => {
+        this.cancelarEdicion();
+        this.cargar();
+        this.snackBar.open('Cargo actualizado', 'Cerrar', { duration: 2500 });
+      },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error actualizando cargo', 'Cerrar', { duration: 3500 })
+    });
+  }
+
+  eliminarCargo(item: CatalogItem): void {
+    if (!confirm(`Eliminar cargo ${item.name}?`)) return;
+    this.catalogs.deleteRole(item.id).subscribe({
+      next: () => { this.cargar(); this.snackBar.open('Cargo eliminado', 'Cerrar', { duration: 2500 }); },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error eliminando cargo', 'Cerrar', { duration: 3500 })
+    });
+  }
+
+  editarDepartamento(item: CatalogItem): void {
+    this.cancelarEdicion();
+    this.editingDepartamentoId = item.id;
+    this.editingDepartamentoName = item.name;
+  }
+
+  guardarDepartamentoEdicion(): void {
+    if (!this.editingDepartamentoId || !this.editingDepartamentoName.trim()) return;
+    this.catalogs.updateDepartment(this.editingDepartamentoId, this.editingDepartamentoName.trim()).subscribe({
+      next: () => {
+        this.cancelarEdicion();
+        this.cargar();
+        this.snackBar.open('Departamento actualizado', 'Cerrar', { duration: 2500 });
+      },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error actualizando departamento', 'Cerrar', { duration: 3500 })
+    });
+  }
+
+  eliminarDepartamento(item: CatalogItem): void {
+    if (!confirm(`Eliminar departamento ${item.name}?`)) return;
+    this.catalogs.deleteDepartment(item.id).subscribe({
+      next: () => { this.cargar(); this.snackBar.open('Departamento eliminado', 'Cerrar', { duration: 2500 }); },
+      error: (e) => this.snackBar.open(e?.message ?? 'Error eliminando departamento', 'Cerrar', { duration: 3500 })
+    });
+  }
+
+  cancelarEdicion(): void {
+    this.editingCargoId = '';
+    this.editingCargoName = '';
+    this.editingDepartamentoId = '';
+    this.editingDepartamentoName = '';
   }
 }

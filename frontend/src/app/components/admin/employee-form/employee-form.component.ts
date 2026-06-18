@@ -12,7 +12,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../../services/auth.service';
 import { EmployeeService } from '../../../services/employee.service';
 import { CatalogService } from '../../../services/catalog.service';
-import { Employee } from '../../../models/models';
+import { TurnoService, Turno } from '../../../services/turno.service';
+import { Employee, normalizarRolSistema } from '../../../models/models';
 
 @Component({
   selector: 'app-employee-form',
@@ -32,7 +33,7 @@ import { Employee } from '../../../models/models';
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/dashboard'])"><mat-icon>dashboard</mat-icon> Dashboard</button>
       <button mat-button class="nav-item active"><mat-icon>group</mat-icon> Empleados</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/users'])"><mat-icon>manage_accounts</mat-icon> Usuarios</button>
-      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Roles y Deptos</button>
+      <button mat-button class="nav-item" (click)="router.navigate(['/admin/catalogs'])"><mat-icon>badge</mat-icon> Cargos y Departamentos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/turnos'])"><mat-icon>schedule</mat-icon> Turnos</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/attendance'])"><mat-icon>fact_check</mat-icon> Registros</button>
       <button mat-button class="nav-item" (click)="router.navigate(['/admin/reports'])"><mat-icon>bar_chart</mat-icon> Reportes</button>
@@ -74,7 +75,15 @@ import { Employee } from '../../../models/models';
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Rol *</mat-label>
+              <mat-label>Turno asignado</mat-label>
+              <mat-select [(ngModel)]="empleado.turnoId" name="turnoId" (ngModelChange)="onTurnoChange($event)">
+                <mat-option value="">Sin turno</mat-option>
+                <mat-option *ngFor="let t of turnos" [value]="t.id">{{ t.nombre }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cargo del sistema *</mat-label>
               <mat-select [(ngModel)]="empleado.rol" name="rol" required>
                 <mat-option *ngFor="let r of roles" [value]="r">{{ r }}</mat-option>
               </mat-select>
@@ -109,7 +118,7 @@ import { Employee } from '../../../models/models';
                    (change)="onFotoSeleccionada($event)">
 
             <div *ngIf="fotoPreview" class="foto-actions">
-              <button mat-stroked-button type="button" (click)="fotoPreview = null; fotoArchivo = null">
+              <button mat-stroked-button type="button" (click)="quitarFoto(fotoInput)">
                 <mat-icon>delete</mat-icon> Quitar foto
               </button>
             </div>
@@ -171,6 +180,7 @@ export class EmployeeFormComponent implements OnInit {
   errorMsg = '';
   fotoPreview: string | null = null;
   fotoArchivo: File | null = null;
+  fotoEliminada = false;
 
   empleado: Employee = {
     nombre: '',
@@ -185,12 +195,14 @@ export class EmployeeFormComponent implements OnInit {
     'Recursos Humanos', 'Tecnología', 'Contabilidad',
     'Ventas', 'Marketing', 'Operaciones', 'Legal', 'Gerencia'
   ];
-  roles = ['Empleado', 'Administrador'];
+  roles = ['Usuario', 'Administrador'];
+  turnos: Turno[] = [];
 
   constructor(
     public auth: AuthService,
     private empService: EmployeeService,
     private catalogs: CatalogService,
+    private turnosService: TurnoService,
     private route: ActivatedRoute,
     public router: Router
   ) {}
@@ -202,9 +214,9 @@ export class EmployeeFormComponent implements OnInit {
       }
     });
 
-    this.catalogs.getRoles().subscribe({
+    this.turnosService.getAll(true).subscribe({
       next: (items) => {
-        if (items.length) this.roles = items;
+        this.turnos = items;
       }
     });
 
@@ -214,12 +226,12 @@ export class EmployeeFormComponent implements OnInit {
       this.empService.getById(id).subscribe(e => {
         if (e) {
           this.empleado = { ...e };
-          this.empleado.rol = this.empleado.rol ?? 'Empleado';
+          this.empleado.rol = normalizarRolSistema(this.empleado.rol ?? 'Usuario');
           if (e.fotoUrl) this.fotoPreview = e.fotoUrl;
         }
       });
     } else {
-      this.empleado.rol = 'Empleado';
+      this.empleado.rol = 'Usuario';
     }
   }
 
@@ -228,11 +240,20 @@ export class EmployeeFormComponent implements OnInit {
     const file  = input.files?.[0];
     if (!file) return;
     this.fotoArchivo = file;
+    this.fotoEliminada = false;
     const reader = new FileReader();
     reader.onload = (e: ProgressEvent<FileReader>) => {
       this.fotoPreview = e.target?.result as string;
     };
     reader.readAsDataURL(file);
+  }
+
+  quitarFoto(fotoInput: HTMLInputElement) {
+    this.fotoPreview = null;
+    this.fotoArchivo = null;
+    this.fotoEliminada = true;
+    this.empleado.fotoUrl = '';
+    fotoInput.value = '';
   }
 
   guardar() {
@@ -257,6 +278,9 @@ export class EmployeeFormComponent implements OnInit {
       };
       reader.readAsDataURL(this.fotoArchivo);
     } else {
+      if (this.fotoEliminada) {
+        this.empleado.fotoUrl = '';
+      }
       this.enviarGuardado();
     }
   }
@@ -271,6 +295,11 @@ export class EmployeeFormComponent implements OnInit {
       next: () => { this.guardando = false; this.router.navigate(['/admin/employees']); },
       error: () => { this.guardando = false; this.errorMsg = 'Error al guardar. Intenta de nuevo.'; }
     });
+  }
+
+  onTurnoChange(turnoId: string) {
+    const turno = this.turnos.find(t => t.id === turnoId);
+    this.empleado.turnoNombre = turno?.nombre;
   }
 
   volver() { this.router.navigate(['/admin/employees']); }
