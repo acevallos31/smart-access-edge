@@ -60,11 +60,53 @@ public class AttendanceService
                 .GetSnapshotAsync();
 
             var registros = new List<Dictionary<string, object>>();
+            var usersCache = new Dictionary<string, (string nombre, string departamento)>();
             foreach (var doc in snapshot.Documents)
             {
                 var data = doc.ToDictionary();
                 data["id"] = doc.Id;
-                registros.Add(data);
+
+                var userId = data.TryGetValue("UserId", out var userIdObj)
+                    ? userIdObj?.ToString() ?? string.Empty
+                    : string.Empty;
+
+                var eventType = data.TryGetValue("EventType", out var eventTypeObj)
+                    ? (eventTypeObj?.ToString() ?? string.Empty)
+                    : (data.TryGetValue("Tipo", out var tipoObj) ? (tipoObj?.ToString() ?? string.Empty) : string.Empty);
+
+                if (string.Equals(eventType, "checkin", StringComparison.OrdinalIgnoreCase) || string.Equals(eventType, "in", StringComparison.OrdinalIgnoreCase))
+                    eventType = "entrada";
+                if (string.Equals(eventType, "checkout", StringComparison.OrdinalIgnoreCase) || string.Equals(eventType, "out", StringComparison.OrdinalIgnoreCase))
+                    eventType = "salida";
+
+                var status = data.TryGetValue("Status", out var statusObj)
+                    ? statusObj?.ToString() ?? "puntual"
+                    : "puntual";
+
+                var scheduledTime = data.TryGetValue("ScheduledTime", out var scheduledObj)
+                    ? scheduledObj?.ToString() ?? "--:--"
+                    : "--:--";
+
+                var recordedTime = "--:--";
+                if (data.TryGetValue("Timestamp", out var tsObj) && tsObj is Timestamp ts)
+                    recordedTime = ts.ToDateTime().ToLocalTime().ToString("HH:mm");
+
+                var (nombre, departamento) = await ObtenerUsuarioCacheadoAsync(userId, usersCache);
+
+                registros.Add(new Dictionary<string, object>
+                {
+                    ["id"] = doc.Id,
+                    ["userId"] = userId,
+                    ["userName"] = nombre,
+                    ["employeeId"] = userId,
+                    ["departamento"] = departamento,
+                    ["department"] = departamento,
+                    ["eventType"] = string.IsNullOrWhiteSpace(eventType) ? "entrada" : eventType,
+                    ["scheduledTime"] = scheduledTime,
+                    ["recordedTime"] = recordedTime,
+                    ["status"] = string.IsNullOrWhiteSpace(status) ? "puntual" : status,
+                    ["timestamp"] = data.TryGetValue("Timestamp", out var rawTimestamp) ? rawTimestamp : Timestamp.GetCurrentTimestamp()
+                });
             }
             return registros;
         }
@@ -221,11 +263,26 @@ public class AttendanceService
             bool esEntrada = tipoNormalizado is "checkin" or "entrada" or "in";
             string tipoPersistido = esEntrada ? "entrada" : "salida";
 
+            var userData = snapshot.ToDictionary();
+            var userName = userData.TryGetValue("Nombre", out var nombreObj) ? nombreObj?.ToString() ?? "Empleado" : "Empleado";
+            var userEmail = userData.TryGetValue("Email", out var emailObj) ? emailObj?.ToString() ?? string.Empty : string.Empty;
+
+            string departamento = "General";
+            var employeeDoc = await _firebaseService.GetCollection("Employees").Document(uid).GetSnapshotAsync();
+            if (employeeDoc.Exists && employeeDoc.TryGetValue<string>("departamento", out var depto) && !string.IsNullOrWhiteSpace(depto))
+                departamento = depto;
+
             Dictionary<string, object> logData = new()
             {
                 ["UserId"] = uid,
                 ["Timestamp"] = Timestamp.GetCurrentTimestamp(),
-                ["Tipo"] = tipoPersistido
+                ["Tipo"] = tipoPersistido,
+                ["EventType"] = tipoPersistido,
+                ["UserName"] = userName,
+                ["Email"] = userEmail,
+                ["Departamento"] = departamento,
+                ["Department"] = departamento,
+                ["Status"] = "puntual"
             };
 
             await _firebaseService.GetCollection("AttendanceLogs").Document().SetAsync(logData);
@@ -237,5 +294,36 @@ public class AttendanceService
         {
             return false;
         }
+    }
+
+    private async Task<(string nombre, string departamento)> ObtenerUsuarioCacheadoAsync(
+        string userId,
+        Dictionary<string, (string nombre, string departamento)> cache)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            return ("Empleado", "General");
+
+        if (cache.TryGetValue(userId, out var cached))
+            return cached;
+
+        string nombre = userId;
+        string departamento = "General";
+
+        var userDoc = await _firebaseService.GetCollection("Users").Document(userId).GetSnapshotAsync();
+        if (userDoc.Exists)
+        {
+            if (userDoc.TryGetValue<string>("Nombre", out var nombreDb) && !string.IsNullOrWhiteSpace(nombreDb))
+                nombre = nombreDb;
+        }
+
+        var employeeDoc = await _firebaseService.GetCollection("Employees").Document(userId).GetSnapshotAsync();
+        if (employeeDoc.Exists)
+        {
+            if (employeeDoc.TryGetValue<string>("departamento", out var deptoDb) && !string.IsNullOrWhiteSpace(deptoDb))
+                departamento = deptoDb;
+        }
+
+        cache[userId] = (nombre, departamento);
+        return (nombre, departamento);
     }
 }

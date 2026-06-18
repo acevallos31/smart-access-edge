@@ -24,6 +24,7 @@ namespace SmartAccess.API.Services
         private readonly ILogger<FaceVerificationService> _logger;
         private readonly string _tpuServerUrl;
         private readonly string _verifyEndpoint;
+        private readonly string _embeddingEndpoint;
         private readonly bool _tpuEnabled;
         private readonly int _timeoutSeconds;
 
@@ -33,6 +34,7 @@ namespace SmartAccess.API.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _tpuServerUrl = config["InferenceServer:Url"] ?? "https://inference-api.nocpbx.com";
             _verifyEndpoint = config["InferenceServer:VerifyEndpoint"] ?? "/verify";
+            _embeddingEndpoint = config["InferenceServer:EmbeddingEndpoint"] ?? "/face/embedding";
             _tpuEnabled = config.GetValue<bool>("InferenceServer:Enabled", true);
             _timeoutSeconds = config.GetValue<int>("InferenceServer:TimeoutSeconds", 10);
             
@@ -50,18 +52,22 @@ namespace SmartAccess.API.Services
         /// Si TPU está disabled o hay error de conexión, retorna verified=true (fallback).
         /// </summary>
         public async Task<(bool verified, double distance, double confidence, string message)> VerifyFaceAsync(
-            string referencePhotoUrl, string capturePhotoUrl, double threshold = 0.6)
+            string referencePhotoUrl, string capturePhotoUrl, double threshold = 0.6, bool allowFallback = true)
         {
             try
             {
                 if (!_tpuEnabled)
                 {
                     _logger.LogInformation("Verificación TPU deshabilitada - permitiendo check-in");
-                    return (true, 0, 0, "Verificación TPU deshabilitada - acceso permitido");
+                    return allowFallback
+                        ? (true, 0, 0, "Verificación TPU deshabilitada - acceso permitido")
+                        : (false, 0, 0, "Verificación TPU deshabilitada en modo estricto");
                 }
 
                 if (string.IsNullOrWhiteSpace(referencePhotoUrl) || string.IsNullOrWhiteSpace(capturePhotoUrl))
-                    return (true, 0, 0, "URLs no disponibles - verificación omitida");
+                    return allowFallback
+                        ? (true, 0, 0, "URLs no disponibles - verificación omitida")
+                        : (false, 0, 0, "URLs no disponibles para verificación estricta");
 
                 var request = new
                 {
@@ -80,7 +86,9 @@ namespace SmartAccess.API.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("TPU Server respondió con error: {StatusCode} - permitiendo acceso", response.StatusCode);
-                    return (true, 0, 0, "Servidor TPU no disponible - acceso permitido (fallback)");
+                    return allowFallback
+                        ? (true, 0, 0, "Servidor TPU no disponible - acceso permitido (fallback)")
+                        : (false, 0, 0, "Servidor TPU no disponible en modo estricto");
                 }
 
                 var jsonStr = await response.Content.ReadAsStringAsync();
@@ -104,18 +112,95 @@ namespace SmartAccess.API.Services
             catch (OperationCanceledException)
             {
                 _logger.LogWarning("Timeout conectando a servidor TPU - permitiendo acceso");
-                return (true, 0, 0, "Servidor TPU no responde - acceso permitido (timeout)");
+                return allowFallback
+                    ? (true, 0, 0, "Servidor TPU no responde - acceso permitido (timeout)")
+                    : (false, 0, 0, "Timeout del servidor TPU en modo estricto");
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogWarning(ex, "Error de conexión con servidor TPU - permitiendo acceso");
-                return (true, 0, 0, "No se pudo contactar servidor TPU - acceso permitido (conexión)");
+                return allowFallback
+                    ? (true, 0, 0, "No se pudo contactar servidor TPU - acceso permitido (conexión)")
+                    : (false, 0, 0, "Error de conexión con servidor TPU en modo estricto");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error inesperado verificando cara - permitiendo acceso");
-                return (true, 0, 0, "Error inesperado - acceso permitido (fallback)");
+                return allowFallback
+                    ? (true, 0, 0, "Error inesperado - acceso permitido (fallback)")
+                    : (false, 0, 0, "Error inesperado en verificación estricta");
             }
+        }
+
+        /// <summary>
+        /// Intenta generar embedding facial desde una URL de imagen.
+        /// No bloquea el flujo principal si el servidor TPU no tiene este endpoint.
+        /// </summary>
+        public async Task<(bool success, List<double> embedding, string message)> GenerateEmbeddingAsync(string photoUrl)
+        {
+            try
+            {
+                if (!_tpuEnabled)
+                    return (false, new List<double>(), "TPU deshabilitado");
+
+                if (string.IsNullOrWhiteSpace(photoUrl))
+                    return (false, new List<double>(), "URL de foto vacía");
+
+                var request = new
+                {
+                    image_url = photoUrl,
+                    photo_url = photoUrl,
+                    url = photoUrl
+                };
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_timeoutSeconds));
+                var response = await _httpClient.PostAsJsonAsync(
+                    $"{_tpuServerUrl}{_embeddingEndpoint}",
+                    request,
+                    cts.Token
+                );
+
+                if (!response.IsSuccessStatusCode)
+                    return (false, new List<double>(), $"Endpoint embedding no disponible ({(int)response.StatusCode})");
+
+                var jsonStr = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(jsonStr);
+                var root = doc.RootElement;
+
+                if (TryReadEmbedding(root, out var emb))
+                    return (true, emb, "Embedding generado");
+
+                return (false, new List<double>(), "Respuesta sin embedding");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo generar embedding facial");
+                return (false, new List<double>(), "No se pudo generar embedding");
+            }
+        }
+
+        private static bool TryReadEmbedding(JsonElement root, out List<double> embedding)
+        {
+            embedding = new List<double>();
+
+            JsonElement embElement;
+            if (root.TryGetProperty("embedding", out embElement) ||
+                root.TryGetProperty("vector", out embElement) ||
+                root.TryGetProperty("faceEmbedding", out embElement))
+            {
+                if (embElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in embElement.EnumerateArray())
+                    {
+                        if (item.TryGetDouble(out var value))
+                            embedding.Add(value);
+                    }
+
+                    return embedding.Count > 0;
+                }
+            }
+
+            return false;
         }
 
         private class FaceVerificationResponse

@@ -168,10 +168,29 @@ namespace SmartAccess.API.Controllers
                 // 1. Obtener foto guardada del empleado
                 var (success, referenceUrl) = await _photoService.ObtenerFotoEmpleadoAsync(payload.UserId);
                 if (!success || string.IsNullOrWhiteSpace(referenceUrl))
-                    return StatusCode(404, new { message = "Foto de referencia no encontrada. Actualizar foto de perfil." });
+                {
+                    var fallbackRegistered = await _attendanceService.RegistrarAsistenciaAsync(
+                        payload.UserId,
+                        payload.EventType ?? "entrada"
+                    );
 
-                // 2. Guardar foto capturada temporalmente
-                var (uploaded, captureUrl, uploadMsg) = await _photoService.GuardarFotoEmpleadoAsync(
+                    if (!fallbackRegistered)
+                        return StatusCode(500, new { message = "Foto de referencia no encontrada y no se pudo registrar asistencia." });
+
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Foto de referencia no encontrada - asistencia registrada (fallback)",
+                        verified = true,
+                        distance = 0,
+                        confidence = 0,
+                        eventType = payload.EventType ?? "entrada",
+                        timestamp = DateTime.UtcNow
+                    });
+                }
+
+                // 2. Guardar foto capturada temporalmente (sin tocar la foto de referencia)
+                var (uploaded, captureUrl, uploadMsg) = await _photoService.GuardarCapturaTemporalAsync(
                     payload.UserId,
                     payload.CapturePhotoBase64,
                     "image/jpeg"

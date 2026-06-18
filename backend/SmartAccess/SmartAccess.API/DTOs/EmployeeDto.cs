@@ -4,6 +4,7 @@ namespace SmartAccess.API.DTOs
     {
         public string Nombre { get; set; } = string.Empty;
         public string Departamento { get; set; } = string.Empty;
+        public string Rol { get; set; } = "Empleado";
         public string Cargo { get; set; } = string.Empty;
         public string HorarioAsignado { get; set; } = string.Empty;
         public string FotoReferenciaUrl { get; set; } = string.Empty;

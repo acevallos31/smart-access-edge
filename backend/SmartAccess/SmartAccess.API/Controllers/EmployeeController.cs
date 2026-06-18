@@ -20,13 +20,36 @@ namespace SmartAccess.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllEmployees()
+        public async Task<IActionResult> GetAllEmployees([FromQuery] bool? soloActivos = null)
         {
             var snapshot = await _firebaseService
                 .GetCollection("Employees")
                 .GetSnapshotAsync();
 
-            var employees = snapshot.Documents.Select(doc =>
+            var employees = snapshot.Documents
+                .Where(doc =>
+                {
+                    if (soloActivos is null)
+                    {
+                        return true;
+                    }
+
+                    var data = doc.ToDictionary();
+                    if (!data.TryGetValue("activo", out var activoRaw))
+                    {
+                        return !soloActivos.Value;
+                    }
+
+                    var activo = activoRaw switch
+                    {
+                        bool b => b,
+                        string s when bool.TryParse(s, out var parsed) => parsed,
+                        _ => false
+                    };
+
+                    return soloActivos.Value ? activo : !activo;
+                })
+                .Select(doc =>
             {
                 var data = doc.ToDictionary();
                 data["id"] = doc.Id;
@@ -64,6 +87,7 @@ namespace SmartAccess.API.Controllers
             {
                 ["nombre"] = employee.Nombre,
                 ["departamento"] = employee.Departamento,
+                ["rol"] = string.IsNullOrWhiteSpace(employee.Rol) ? "Empleado" : employee.Rol,
                 ["cargo"] = employee.Cargo,
                 ["horarioAsignado"] = employee.HorarioAsignado,
                 ["fotoReferenciaUrl"] = employee.FotoReferenciaUrl,
@@ -159,6 +183,79 @@ namespace SmartAccess.API.Controllers
             });
         }
 
+        [HttpPatch("{id}/deactivate")]
+        public async Task<IActionResult> DeactivateEmployee(string id, [FromBody] DeactivateEmployeeRequest? request)
+        {
+            var docRef = _firebaseService
+                .GetCollection("Employees")
+                .Document(id);
+
+            var snapshot = await docRef.GetSnapshotAsync();
+            if (!snapshot.Exists)
+            {
+                return NotFound(new { message = "Empleado no encontrado" });
+            }
+
+            var update = new Dictionary<string, object>
+            {
+                ["activo"] = false,
+                ["deactivatedAt"] = Timestamp.GetCurrentTimestamp(),
+                ["updatedAt"] = Timestamp.GetCurrentTimestamp()
+            };
+
+            if (!string.IsNullOrWhiteSpace(request?.Razon))
+            {
+                update["razonInactividad"] = request.Razon.Trim().ToLowerInvariant();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request?.Nota))
+            {
+                update["notaInactividad"] = request.Nota.Trim();
+            }
+
+            await docRef.SetAsync(update, SetOptions.MergeAll);
+
+            return Ok(new
+            {
+                message = "Empleado desactivado",
+                id,
+                activo = false
+            });
+        }
+
+        [HttpPatch("{id}/activate")]
+        public async Task<IActionResult> ActivateEmployee(string id)
+        {
+            var docRef = _firebaseService
+                .GetCollection("Employees")
+                .Document(id);
+
+            var snapshot = await docRef.GetSnapshotAsync();
+            if (!snapshot.Exists)
+            {
+                return NotFound(new { message = "Empleado no encontrado" });
+            }
+
+            var update = new Dictionary<string, object>
+            {
+                ["activo"] = true,
+                ["updatedAt"] = Timestamp.GetCurrentTimestamp(),
+                ["reactivatedAt"] = Timestamp.GetCurrentTimestamp(),
+                ["razonInactividad"] = FieldValue.Delete,
+                ["notaInactividad"] = FieldValue.Delete,
+                ["deactivatedAt"] = FieldValue.Delete
+            };
+
+            await docRef.SetAsync(update, SetOptions.MergeAll);
+
+            return Ok(new
+            {
+                message = "Empleado reactivado",
+                id,
+                activo = true
+            });
+        }
+
         private static object? ConvertToFirestoreValue(object? value)
         {
             if (value is null)
@@ -190,6 +287,12 @@ namespace SmartAccess.API.Controllers
                 JsonValueKind.Null => null,
                 _ => null
             };
+        }
+
+        public class DeactivateEmployeeRequest
+        {
+            public string? Razon { get; set; }
+            public string? Nota { get; set; }
         }
     }
 }

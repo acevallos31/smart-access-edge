@@ -57,7 +57,12 @@ namespace SmartAccess.API.Controllers
             {
                 var url = _configuration["InferenceServer:Url"];
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                var response = await client.GetAsync($"{url}/health");
+                var response = await client.GetAsync($"{url}/status");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    response = await client.GetAsync(url ?? string.Empty);
+                }
                 
                 return Ok(new
                 {
