@@ -137,7 +137,7 @@ namespace SmartAccess.API.Controllers
                 );
                 if (!result.Success)
                 {
-                    return StatusCode(500, new { message = "Error registrando asistencia" });
+                    return StatusCode(500, new { message = result.ErrorMessage ?? "Error registrando asistencia" });
                 }
 
                 return Ok(new
@@ -176,7 +176,38 @@ namespace SmartAccess.API.Controllers
                 // 1. Obtener foto guardada del empleado
                 var (success, referenceUrl) = await _photoService.ObtenerFotoEmpleadoAsync(payload.UserId);
                 if (!success || string.IsNullOrWhiteSpace(referenceUrl))
-                    return StatusCode(404, new { message = "Foto de referencia no encontrada. Actualizar foto de perfil." });
+                {
+                    if (payload.StrictMode)
+                    {
+                        return StatusCode(404, new { message = "Foto de referencia no encontrada. Actualizar foto de perfil." });
+                    }
+
+                    var withoutReference = await _attendanceService.RegistrarAsistenciaAsync(
+                        payload.UserId,
+                        payload.EventType ?? "entrada",
+                        payload.Ubicacion,
+                        payload.CapturePhotoBase64
+                    );
+
+                    if (!withoutReference.Success)
+                    {
+                        return StatusCode(500, new { message = withoutReference.ErrorMessage ?? "Error registrando asistencia sin verificación facial" });
+                    }
+
+                    _logger.LogWarning("Asistencia registrada sin verificación facial para {UserId}: foto de referencia no encontrada", payload.UserId);
+
+                    return Ok(new
+                    {
+                        success = true,
+                        verified = false,
+                        message = "Asistencia registrada sin verificación facial (sin foto de referencia)",
+                        eventType = withoutReference.EventType,
+                        status = withoutReference.Status,
+                        recordedTime = withoutReference.RecordedTime,
+                        scheduledTime = withoutReference.ScheduledTime,
+                        timestamp = withoutReference.TimestampUtc
+                    });
+                }
 
                 // 2. Guardar foto capturada temporalmente
                 var (uploaded, captureUrl, uploadMsg) = await _photoService.GuardarFotoEmpleadoAsync(
@@ -215,7 +246,7 @@ namespace SmartAccess.API.Controllers
                     captureUrl
                 );
                 if (!registered.Success)
-                    return StatusCode(500, new { message = "Error registrando asistencia después de verificación" });
+                    return StatusCode(500, new { message = registered.ErrorMessage ?? "Error registrando asistencia después de verificación" });
 
                 _logger.LogInformation("Verificación facial exitosa y asistencia registrada para {UserId}", payload.UserId);
 

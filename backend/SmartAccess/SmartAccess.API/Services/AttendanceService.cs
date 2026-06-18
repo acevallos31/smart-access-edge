@@ -1,4 +1,5 @@
 using Google.Cloud.Firestore;
+using System.Text.Json;
 
 namespace SmartAccess.API.Services;
 
@@ -29,6 +30,7 @@ public class AttendanceService
         public string ScheduledTime { get; init; } = "--:--";
         public string EventType { get; init; } = "entrada";
         public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
+        public string? ErrorMessage { get; init; }
     }
 
     /// <summary>
@@ -225,16 +227,22 @@ public class AttendanceService
             var userRef = _firebaseService.GetCollection("Users").Document(uid);
             var snapshot = await userRef.GetSnapshotAsync();
 
-            if (!snapshot.Exists)
+            var userExists = snapshot.Exists;
+            var userData = userExists
+                ? snapshot.ToDictionary()
+                : new Dictionary<string, object>();
+
+            if (!userExists)
             {
-                return new AttendanceRegistrationResult { Success = false };
+                _logger.LogWarning("No se encontró documento Users para {Uid}; se intentará registrar usando Employees", uid);
             }
 
-            var userData = snapshot.ToDictionary();
             var userName = GetString(userData, "Nombre", "nombre") ?? "Empleado";
             var userEmail = GetString(userData, "Email", "email") ?? string.Empty;
 
             var employeeData = await FindEmployeeByUidOrEmailAsync(uid, userEmail);
+            userName = GetString(employeeData, "nombre", "Nombre") ?? userName;
+            userEmail = GetString(employeeData, "email", "Email") ?? userEmail;
             var departamento = GetString(employeeData, "departamento", "Departamento", "department", "Department") ?? "General";
             var turnoData = await GetTurnoForEmployeeAsync(employeeData);
 
@@ -294,7 +302,10 @@ public class AttendanceService
             }
 
             await _firebaseService.GetCollection("AttendanceLogs").Document().SetAsync(logData);
-            await userRef.UpdateAsync("CheckedIn", esEntrada);
+            if (userExists)
+            {
+                await userRef.UpdateAsync("CheckedIn", esEntrada);
+            }
 
             return new AttendanceRegistrationResult
             {
@@ -306,9 +317,14 @@ public class AttendanceService
                 TimestampUtc = now
             };
         }
-        catch
+        catch (Exception ex)
         {
-            return new AttendanceRegistrationResult { Success = false };
+            _logger.LogError(ex, "Error registrando asistencia para {Uid} con tipo {TipoMovimiento}", uid, tipoMovimiento);
+            return new AttendanceRegistrationResult
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
         }
     }
 
@@ -739,10 +755,58 @@ public class AttendanceService
         var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in ubicacion)
         {
-            dict[kv.Key] = kv.Value ?? string.Empty;
+            dict[kv.Key] = ConvertFirestoreSafeValue(kv.Value);
         }
 
         return dict.Count == 0 ? null : dict;
+    }
+
+    private static object ConvertFirestoreSafeValue(object? raw)
+    {
+        if (raw == null)
+        {
+            return string.Empty;
+        }
+
+        if (raw is JsonElement json)
+        {
+            return ConvertJsonElement(json);
+        }
+
+        if (raw is IReadOnlyDictionary<string, object> readOnlyDict)
+        {
+            return readOnlyDict.ToDictionary(k => k.Key, v => ConvertFirestoreSafeValue(v.Value));
+        }
+
+        if (raw is Dictionary<string, object> dict)
+        {
+            return dict.ToDictionary(k => k.Key, v => ConvertFirestoreSafeValue(v.Value));
+        }
+
+        if (raw is IEnumerable<object> list)
+        {
+            return list.Select(ConvertFirestoreSafeValue).ToList();
+        }
+
+        return raw;
+    }
+
+    private static object ConvertJsonElement(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => element.EnumerateObject()
+                .ToDictionary(p => p.Name, p => ConvertJsonElement(p.Value)),
+            JsonValueKind.Array => element.EnumerateArray()
+                .Select(ConvertJsonElement)
+                .ToList(),
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Number => element.TryGetInt64(out var numberLong) ? numberLong : element.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null => string.Empty,
+            _ => element.ToString()
+        };
     }
 
     private static bool TryParseClock(string value, out TimeSpan time)

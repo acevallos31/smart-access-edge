@@ -38,7 +38,8 @@ dotnet run --project SmartAccess.API
 ### Frontend (Angular)
 ```bash
 cd frontend
-npm install pnmp
+npm install -g pnpm
+pnpm install
 pnpm start
 # App disponible en http://localhost:4200
 ```
