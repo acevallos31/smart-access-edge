@@ -98,3 +98,23 @@ inference-server/face_data/
 inference-server/*.jpg
 inference-server/*.pt
 inference-server/*.bak
+
+# Local configuration and secrets
+.env.*
+!.env.example
+*.secret
+*.pem
+*.key
+
+# Local backups
+*.bak
+*.pre-watchdog
+*.ffmpeg-watchdog
+
+# Local databases
+*.sqlite
+*.sqlite3
+
+# Python environments
+.venv/
+venv/
