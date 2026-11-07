@@ -15,7 +15,7 @@ def save_event(event_data):
             persons=event_data["persons"],
             timestamp=event_data["timestamp"],
             snapshot_url=event_data["snapshotUrl"],
-            stable_detection=event_data["stableDetection"]
+            stable_detection=event_data["stableDetection"],
             person_boxes=event_data.get("personBoxes", []),
             recognized_faces=event_data.get("recognizedFaces", [])
         )

@@ -1,3 +1,4 @@
+import os
 import threading
 import asyncio
 
@@ -12,6 +13,10 @@ app = create_api()
 @app.on_event("startup")
 async def startup_event():
     set_loop(asyncio.get_running_loop())
+
+    if os.getenv("ENABLE_CAMERA_WORKERS", "true").lower() != "true":
+        print("Camera workers deshabilitados")
+        return
 
     for camera_id, camera_config in CAMERAS.items():
         threading.Thread(

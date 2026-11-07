@@ -1,8 +1,20 @@
+from pathlib import Path
+from urllib.parse import quote
+
+EZVIZ_PASSWORD = Path(
+    "/root/ezviz-rtsp.secret"
+).read_text().strip()
+
+
 CAMERAS = {
     "entrada01": {
         "name": "Entrada Principal",
-        "rtsp": "rtsp://frigate:FriGat3100@192.168.1.114:554/Streaming/Channels/901",
+        "rtsp": (
+            "rtsp://admin:"
+            + quote(EZVIZ_PASSWORD, safe="")
+            + "@192.168.1.121:554/Streaming/Channels/101"
+        ),
         "width": 640,
-        "height": 360
+        "height": 360,
     }
 }
