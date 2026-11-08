@@ -12,7 +12,7 @@ CAMERAS = {
         "rtsp": (
             "rtsp://admin:"
             + quote(EZVIZ_PASSWORD, safe="")
-            + "@192.168.1.121:554/Streaming/Channels/101"
+            + "@192.168.1.176:554/Streaming/Channels/101"
         ),
         "width": 640,
         "height": 360,
